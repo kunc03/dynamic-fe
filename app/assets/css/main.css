@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/*
+  Tailwind v4 CSS-first config (§2.1) — token tema (warna, radius, dst.)
+  didefinisikan di sini lewat @theme begitu Admin Config Page / desain
+  final tersedia (§4, §5). Contoh:
+
+  @theme {
+    --color-primary: #...;
+  }
+*/
+
+:root {
+  /* Lebar "desain" tetap buat SEMUA koordinat canvas (posisi elemen,
+     tinggi header/footer, dst — semuanya px absolut, lihat
+     canvasElements.ts). Ganti angka ini aja kalau mau ubah lebar desainnya
+     — TAPI elemen yang udah ke-save posisinya tetap dalam satuan px lama,
+     jadi ganti nilai ini di tengah jalan bakal bikin proporsi lama berubah. */
+  --app-mobile-width: 390px;
+  /* Faktor scale visual .app-shell — di-set dari JS (lihat
+     AppScaleController.vue, dipasang di app.vue) berdasarkan lebar layar
+     ASLI device. Default 1 (dipakai SEBELUM JS sempat jalan pas SSR/first
+     paint, DAN di layar lebar/desktop di mana AppScaleController sengaja
+     matiin scaling-nya) — lihat penjelasan lengkap kenapa perlu ini di
+     .app-shell di bawah. */
+  --app-scale: 1;
+}
+
+html,
+body {
+  height: 100%;
+  /* Area putih kiri-kanan di layar lebar — statis, gak ada tool admin buat
+     ubah ini. Yang bisa diubah admin adalah background CONTENT di
+     .app-shell (lihat di bawah), bukan area luar ini. */
+  background-color: #ffffff;
+  /* Body sendiri gak usah scroll — yang scroll adalah .app-shell di bawah,
+     supaya dia selalu persis setinggi layar (lihat catatan di .app-shell). */
+  overflow: hidden;
+}
+
+/*
+  Membatasi web app ini ke lebar "desain" tetap (--app-mobile-width, 390px)
+  & di-center secara horizontal — SEMUA koordinat canvas (posisi elemen,
+  tinggi header/footer, dst, lihat canvasElements.ts/sectionVisibility.ts)
+  dirancang relatif ke lebar 390px ini, gak pernah berubah.
+
+  Supaya tetap ngisi PENUH lebar layar HP asli TANPA bikin posisi elemen
+  ikut geser-geser beda-beda antar device (masalah yang muncul kalau
+  .app-shell dibiarkan ambil lebar device APA ADANYA — device beda lebar =
+  koordinat px yang sama jatuh di tempat relatif yang beda), seluruh
+  .app-shell (isinya SEKALIGUS, termasuk semua elemen canvas di dalamnya)
+  di-SCALE VISUAL secara proporsional (`transform: scale`, BUKAN ngubah
+  lebar asli 390px-nya) sampai persis ngisi lebar device — jadi posisi tiap
+  elemen SELALU identik secara relatif ke desain 390px aslinya, di HP
+  manapun, sekaligus tetap ngisi penuh layar tanpa celah.
+
+  `--app-scale` yang ngatur rasio scale-nya, di-hitung & di-update dari JS
+  (AppScaleController.vue) berdasarkan lebar viewport ASLI — CUMA aktif
+  kalau DUA syarat kepenuhin: layar <=480px (breakpoint mobile yang sama
+  dipakai di tempat lain kayak OuterBackgroundButton.vue) DAN beneran layar
+  sentuh primer (`pointer: coarse` + `hover: none`, ciri khas HP asli —
+  lihat penjelasan lengkap di AppScaleController.vue kenapa cek lebar aja
+  gak cukup). Kalau salah satu gak kepenuhin (layar lebar DESKTOP/TABLET,
+  ATAU jendela browser desktop yang cuma disempitin pakai mouse), --app-scale
+  dipaksa balik ke 1, jadi balik ke frame "layar HP" 390px + center +
+  letterbox seperti semula.
+*/
+.app-shell {
+  width: var(--app-mobile-width);
+  margin-inline: auto;
+  /*
+    Background CONTENT (bagian DALAM app-shell). Default-nya tema gelap
+    (--ui-bg) selama belum di-custom admin — dipakai lewat var() fallback
+    di sini (bukan nilai default di :root), supaya begitu admin klik
+    "Reset ke default", JS-nya tinggal hapus custom property-nya dan
+    otomatis balik ke --ui-bg tanpa perlu tahu nilai persisnya.
+  */
+  background-color: var(--app-content-bg-color, var(--ui-bg));
+  background-image: var(--app-content-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /*
+    Tinggi LOKAL (sebelum di-scale) sengaja `100dvh / --app-scale`, BUKAN
+    `100dvh` polos — soalnya abis di-`transform: scale`, tinggi VISUAL
+    kotak ini otomatis jadi `(100dvh / scale) * scale = 100dvh` persis, sama
+    kayak lebarnya yang juga hasil scale dari 390px ke lebar device asli.
+    Kalau dibiarkan `100dvh` polos terus di-scale bareng lebarnya, tingginya
+    ikut menyusut/membesar padahal tinggi viewport itu FAKTA fisik device,
+    bukan bagian dari "desain 390px" yang emang sengaja diseragamkan.
+
+    overflow-y auto: .app-shell (abis di-scale) jadi persis setinggi layar
+    dan scroll sendiri di dalam dirinya (kayak layar HP). Ini penting supaya
+    modal yang di-center relatif ke shell (lihat catatan transform di
+    bawah) selalu ke-center di tengah layar yang kelihatan — bukan di
+    tengah total tinggi konten kalau kontennya panjang dan di-scroll.
+  */
+  height: calc(100dvh / var(--app-scale, 1));
+  overflow-y: auto;
+  /* Konten mobile gak boleh geser ke samping — kalau ada elemen yang
+     kelebaran dari 390px, dia dipotong, bukan bikin scrollbar horizontal. */
+  overflow-x: hidden;
+
+  /* Sembunyikan scrollbar bawaan browser (kasar & gak app-like), tapi
+     scroll-nya sendiri tetap jalan normal lewat mouse/trackpad/sentuh. */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge lama */
+
+  /*
+    `scale(var(--app-scale))` — INI yang bikin .app-shell (390px lebar
+    "desain") divisualkan pas ngisi lebar device asli (lihat penjelasan
+    panjang di atas). `transform-origin: top left` WAJIB dipasangin sama
+    `margin-inline: 0` di breakpoint mobile (lihat media query di bawah) —
+    kalau dibiarkan `margin-inline: auto` di situ, box 390px-nya bisa
+    ke-center dulu (offset dari kiri) SEBELUM di-scale, jadinya nge-scale
+    dari titik yang salah & nyisain celah/kepotong di salah satu sisi.
+    `translateZ(0)` (fungsinya beda, lihat komentar sendiri di bawah)
+    digabung jadi SATU daftar transform, bukan property terpisah, soalnya
+    `transform` cuma boleh dipakai SEKALI per elemen (declaration kedua
+    bakal nimpa yang pertama, bukan digabung otomatis).
+  */
+  transform: scale(var(--app-scale, 1)) translateZ(0);
+  transform-origin: top left;
+}
+
+.app-shell::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge baru */
+}
+
+/*
+  Di layar <=480px YANG BENERAN layar sentuh primer (HP asli, `pointer:
+  coarse` + `hover: none` — lihat penjelasan lengkap kenapa syarat touch
+  ini WAJIB, bukan cuma cek lebar, di AppScaleController.vue) — lepas
+  center-margin bawaan, biar box 390px "desain" mulai persis dari x=0
+  SEBELUM di-scale (lihat penjelasan `transform-origin: top left` di atas).
+  Tanpa ini, di device yang lebih LEBAR dari 390px (412-430px, kelas device
+  yang justru jadi alasan fitur scale ini dibikin), box-nya bakal ke-center
+  dulu (nyisa celah kiri) terus abis di-scale malah kepotong di kanan —
+  gak PAS ngisi penuh dari 0 sampe ujung layar.
+
+  Syarat `pointer`/`hover` di sini WAJIB SAMA PERSIS kayak yang dicek
+  AppScaleController.vue buat nentuin --app-scale — kalau CSS di sini
+  lepas margin (nganggep "ini mobile") tapi JS-nya mutusin --app-scale
+  tetap 1 (nganggep "ini bukan HP asli", mis. jendela desktop yang
+  disempitin), box 390px bakal nempel rata kiri TANPA discale — jadinya
+  malah GAK ke-center sama sekali di jendela desktop yang lagi sempit,
+  bukan mempertahankan tampilan frame-center yang biasa.
+*/
+@media (max-width: 480px) and (pointer: coarse) and (hover: none) {
+  .app-shell {
+    margin-inline: 0;
+  }
+}

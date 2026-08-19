@@ -1,0 +1,23 @@
+-- SUPERSEDED — JANGAN DIPAKAI.
+--
+-- File ini adalah draft AWAL sebelum saya (Claude) sempat lihat isi
+-- project `be` (E:\Code\Vue\Super Dynamic\be). Dua masalah kalau file ini
+-- dijalankan:
+--   1. Nomor "0014" sudah dipakai migration lain di project `be`
+--      (0014_font_presets.sql) — migration BERIKUTNYA yang valid di sana
+--      adalah 0018.
+--   2. Function `create_page(text, text)` di file ini NAMANYA SAMA PERSIS
+--      dengan function `create_page(p_title, p_route)` yang SUDAH ADA di
+--      project `be` (migration 0010_functions_core.sql, dipakai sistem
+--      Page Builder project `fe`) — kalau file ini dijalankan, `create or
+--      replace function` di sini akan MENIMPA/MERUSAK function yang sudah
+--      ada itu.
+--
+-- Migration yang BENAR (nama tabel & function sudah diganti supaya gak
+-- collision, + tambahan pengecekan konflik route ke page_configs) ada di:
+--   E:\Code\Vue\Super Dynamic\be\supabase\migrations\0018_canvas_pages.sql
+--
+-- Silakan hapus file ini (dynamic-fe/supabase-migrations/0014_pages.sql)
+-- kapan-kapan — dibiarkan isinya diganti jadi catatan ini aja (bukan
+-- dihapus beneran) karena saya cuma bisa nulis file lewat device bridge,
+-- gak bisa hapus file di komputer kamu.

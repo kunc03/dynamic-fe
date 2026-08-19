@@ -1,0 +1,56 @@
+<script setup lang="ts">
+// Tombol commit buat perubahan background CONTENT (lihat
+// OuterBackgroundButton.vue & backgroundSettings.ts). Sengaja komponen &
+// posisi terpisah (kanan atas, bukan nempel di cluster ikon tool kiri)
+// supaya jelas ini aksi "simpan", bukan sekadar buka panel. Cuma tampil
+// kalau ada draft yang belum disimpan (bg.isDirty), biar gak nongol
+// nutupin pojok kanan atas pas gak lagi ada yang diedit.
+const adminAuth = useAdminAuthStore()
+const bg = useBackgroundStore()
+const toast = useToast()
+
+async function onSaveClick() {
+  try {
+    await bg.save()
+    toast.add({
+      title: 'Background content tersimpan',
+      color: 'success',
+      icon: 'i-lucide-check'
+    })
+  } catch {
+    toast.add({
+      title: 'Gagal menyimpan background',
+      description: bg.error ?? undefined,
+      color: 'error',
+      icon: 'i-lucide-alert-triangle'
+    })
+  }
+}
+</script>
+
+<template>
+  <UButton
+    v-if="adminAuth.isAuthenticated && adminAuth.isEditMode && bg.isDirty"
+    label="Simpan"
+    icon="i-lucide-check"
+    color="primary"
+    variant="solid"
+    size="lg"
+    :loading="bg.saving"
+    class="save-content-bg fixed top-4 right-4 z-50 shadow-lg"
+    aria-label="Simpan perubahan background content"
+    @click="onSaveClick"
+  />
+</template>
+
+<style scoped>
+/* Sama kayak EditModeToggle/OuterBackgroundButton: di bawah ~480px gak ada
+   ruang tanpa nutupin konten. Trigger panelnya (OuterBackgroundButton) juga
+   udah disembunyikan di breakpoint yang sama, jadi gak akan pernah ada
+   draft buat di-save lewat layar sekecil ini. */
+@media (max-width: 480px) {
+  .save-content-bg {
+    display: none;
+  }
+}
+</style>
