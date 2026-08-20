@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gacha Dynamic — Dynamic Page Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0F2942;
+    --primary:#1F4E79;
+    --accent:#2E75B6;
+    --accent-light:#5B9BD5;
+    --bg:#F5F8FC;
+    --card:#FFFFFF;
+    --text:#152332;
+    --muted:#5B6B7A;
+    --border:#E2E8F0;
+    --done-fg:#1E7A34;
+    --done-bg:#E6F5EA;
+    --todo-fg:#B45309;
+    --todo-bg:#FDF1DF;
+    --shadow: 0 8px 30px rgba(15,41,66,0.08);
+    --shadow-lg: 0 20px 60px rgba(15,41,66,0.16);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; font-family:'Inter',system-ui,sans-serif; color:var(--text); background:var(--bg);
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:'Poppins','Inter',sans-serif; margin:0; line-height:1.25;}
+  p{margin:0;}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 28px;}
+  a{color:inherit;}
+
+  /* NAV */
+  header.nav{
+    position:sticky; top:0; z-index:50; background:rgba(255,255,255,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 28px; max-width:1120px; margin:0 auto;}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; color:var(--primary);}
+  .brand .dot{width:12px; height:12px; border-radius:4px; background:linear-gradient(135deg,var(--accent),var(--accent-light)); display:inline-block; transform:rotate(45deg);}
+  .navlinks{display:flex; gap:28px; font-size:14px; font-weight:500; color:var(--muted);}
+  .navlinks a{text-decoration:none; transition:color .2s;}
+  .navlinks a:hover{color:var(--accent);}
+  .tag-pill{font-size:12px; font-weight:600; padding:5px 12px; border-radius:99px; background:var(--done-bg); color:var(--done-fg); white-space:nowrap;}
+  .brand{white-space:nowrap;}
+  @media (max-width:600px){
+    .nav-inner{flex-wrap:wrap; gap:10px; padding:14px 20px;}
+    .tag-pill{font-size:10.5px; padding:4px 9px;}
+  }
+
+  /* HERO */
+  .hero{padding:76px 0 60px; position:relative; overflow:hidden;}
+  .hero::before{
+    content:''; position:absolute; top:-200px; right:-160px; width:560px; height:560px; border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(46,117,182,0.16), rgba(46,117,182,0) 70%);
+  }
+  .hero-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:56px; align-items:center;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--accent); background:#EAF2FB; padding:7px 14px; border-radius:99px; margin-bottom:20px;}
+  .hero h1{font-size:44px; font-weight:800; color:var(--navy); letter-spacing:-0.02em;}
+  .hero h1 span{color:var(--accent);}
+  .hero p.lead{margin-top:20px; font-size:17px; color:var(--muted); max-width:520px;}
+  .hero-ctas{display:flex; gap:14px; margin-top:32px; flex-wrap:wrap;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:13px 22px; border-radius:10px; font-weight:600; font-size:14.5px;
+    text-decoration:none; cursor:pointer; border:none; transition:transform .15s, box-shadow .15s;
+  }
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--primary)); color:#fff; box-shadow:0 10px 24px rgba(46,117,182,0.35);}
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 14px 30px rgba(46,117,182,0.45);}
+  .btn-ghost{background:#fff; color:var(--primary); border:1.5px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--accent); color:var(--accent);}
+  .stat-row{display:flex; gap:32px; margin-top:40px; flex-wrap:wrap;}
+  .stat b{display:block; font-size:26px; font-weight:800; color:var(--navy); font-family:'Poppins';}
+  .stat span{font-size:12.5px; color:var(--muted); font-weight:500;}
+
+  /* PHONE MOCKUP */
+  .mockup-stage{position:relative; display:flex; justify-content:center;}
+  .float-badge{
+    position:absolute; background:#fff; border:1px solid var(--border); border-radius:12px; padding:9px 13px;
+    font-size:12px; font-weight:600; color:var(--primary); box-shadow:var(--shadow); display:flex; align-items:center; gap:7px;
+    z-index:5;
+  }
+  .float-badge .ic{width:16px; height:16px; border-radius:5px; background:var(--accent); flex:none;}
+  .fb1{top:6%; left:-8%;}
+  .fb2{top:46%; right:-12%;}
+  .fb3{bottom:4%; left:-4%;}
+
+  .phone{
+    width:300px; background:#0d1b2a; border-radius:38px; padding:14px; box-shadow:var(--shadow-lg);
+    position:relative;
+  }
+  .phone-screen{
+    background:#fff; border-radius:26px; overflow:hidden; position:relative; height:560px;
+    display:flex; flex-direction:column;
+  }
+  .notch{position:absolute; top:10px; left:50%; transform:translateX(-50%); width:70px; height:16px; background:#0d1b2a; border-radius:10px; z-index:20;}
+
+  .m-header{
+    height:52px; background:linear-gradient(120deg,var(--primary),var(--accent)); display:flex; align-items:center;
+    justify-content:space-between; padding:0 14px; flex:none; position:relative; margin-top:0;
+  }
+  .m-header .logo-c{width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,0.9);}
+  .m-header .h-lang{display:flex; gap:3px; background:rgba(255,255,255,0.16); border-radius:7px; padding:3px;}
+  .m-header .h-lang span{padding:3px 7px; border-radius:5px; font-size:9.5px; font-weight:700; color:rgba(255,255,255,.7);}
+  .m-header .h-lang span.active{background:#fff; color:var(--primary);}
+
+  .m-body{flex:1; position:relative; background:#F3F6FA; overflow:hidden;}
+
+  .m-el{position:absolute;}
+  .m-hero-text{top:18px; left:18px; right:18px;}
+  .m-hero-text .kicker{font-size:9px; font-weight:700; color:var(--accent); letter-spacing:.06em; text-transform:uppercase;}
+  .m-hero-text h4{font-size:18px; font-weight:800; color:var(--navy); margin-top:5px; line-height:1.28;}
+
+  .m-image{top:150px; left:18px; width:264px; height:92px; border-radius:12px; background:linear-gradient(135deg,#5B9BD5,#8FC1E3); }
+  .m-image::after{content:'🖼'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:22px; opacity:.5;}
+
+  .m-button{top:256px; left:18px; width:150px; height:34px; border-radius:9px; background:var(--accent); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(46,117,182,.4);}
+
+  .m-selected{outline:2px dashed var(--accent); outline-offset:4px; border-radius:12px;}
+  .handle{position:absolute; width:9px; height:9px; background:#fff; border:2px solid var(--accent); border-radius:2px;}
+  .h-tl{top:-6px; left:-6px;} .h-tr{top:-6px; right:-6px;} .h-bl{bottom:-6px; left:-6px;} .h-br{bottom:-6px; right:-6px;}
+
+  .m-toolbar{
+    position:absolute; top:-46px; left:0; background:var(--navy); border-radius:10px; padding:6px 8px; display:flex; gap:6px;
+    box-shadow:0 8px 18px rgba(0,0,0,0.25);
+  }
+  .m-toolbar .ti{width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff;}
+
+  .snap-line{position:absolute; background:repeating-linear-gradient(180deg, var(--accent) 0 4px, transparent 4px 8px); width:1px; z-index:1;}
+  .snap-v{top:145px; height:150px; left:50%;}
+  .snap-label{position:absolute; top:148px; left:calc(50% + 6px); font-size:8px; color:var(--accent); font-weight:700; background:#fff; padding:1px 5px; border-radius:4px; white-space:nowrap;}
+
+  .m-add-btn{
+    position:absolute; bottom:16px; right:16px; width:40px; height:40px; border-radius:50%; background:var(--navy); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; box-shadow:0 8px 18px rgba(0,0,0,.3);
+  }
+  .m-footer{height:38px; background:var(--navy); flex:none; display:flex; align-items:center; justify-content:center; font-size:9px; color:rgba(255,255,255,.5); letter-spacing:.04em;}
+
+  /* SECTION GENERIC */
+  section{padding:64px 0;}
+  .section-head{text-align:center; max-width:640px; margin:0 auto 44px;}
+  .section-head .eyebrow{margin-bottom:14px;}
+  .section-head h2{font-size:32px; font-weight:800; color:var(--navy); letter-spacing:-0.01em;}
+  .section-head p{margin-top:14px; color:var(--muted); font-size:15.5px;}
+
+  /* HOW IT WORKS */
+  .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
+  .step-card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px 20px; position:relative;}
+  .step-num{width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--primary)); color:#fff; font-weight:800; font-family:'Poppins'; display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:16px;}
+  .step-card h4{font-size:15.5px; font-weight:700; color:var(--navy);}
+  .step-card p{font-size:13.5px; color:var(--muted); margin-top:8px;}
+
+  /* FEATURE GRID */
+  .feat-bg{background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .feat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:22px;}
+  .feat-card{border:1px solid var(--border); border-radius:16px; padding:24px; transition:box-shadow .2s, transform .2s; background:var(--card);}
+  .feat-card:hover{box-shadow:var(--shadow); transform:translateY(-3px);}
+  .feat-ic{width:42px; height:42px; border-radius:11px; background:#EAF2FB; color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:14px;}
+  .feat-card h4{font-size:15.5px; font-weight:700; color:var(--navy);}
+  .feat-card p{font-size:13.5px; color:var(--muted); margin-top:8px;}
+  .status-chip{display:inline-block; margin-top:12px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:99px; background:var(--done-bg); color:var(--done-fg);}
+
+  /* COMPARISON */
+  .compare-wrap{background:var(--navy); border-radius:24px; padding:48px; color:#fff;}
+  .compare-head{text-align:center; margin-bottom:36px;}
+  .compare-head h2{font-size:28px; font-weight:800;}
+  .compare-head p{color:#B9C7D6; margin-top:10px; font-size:14.5px;}
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  .compare-col{background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:26px;}
+  .compare-col.new{background:rgba(46,117,182,0.18); border-color:rgba(91,155,213,0.4);}
+  .compare-col h3{font-size:15px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;}
+  .compare-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px;}
+  .compare-col li{font-size:13.5px; color:#D7E2EC; padding-left:22px; position:relative;}
+  .compare-col.old li::before{content:'—'; position:absolute; left:0; color:#8194A6;}
+  .compare-col.new li::before{content:'✓'; position:absolute; left:0; color:#7FD1A0; font-weight:800;}
+
+  /* ROADMAP */
+  .roadmap-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .rm-card{border:1.5px dashed #E3B778; background:var(--todo-bg); border-radius:16px; padding:22px;}
+  .rm-card .rm-top{display:flex; justify-content:space-between; align-items:flex-start;}
+  .rm-ic{width:38px; height:38px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:18px;}
+  .rm-status{font-size:10.5px; font-weight:700; color:var(--todo-fg); background:#fff; padding:3px 9px; border-radius:99px;}
+  .rm-card h4{margin-top:14px; font-size:15px; font-weight:700; color:var(--navy);}
+  .rm-card p{font-size:13px; color:#7A6144; margin-top:6px;}
+  .rm-note{margin-top:28px; text-align:center; font-size:13px; color:var(--muted); background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 22px;}
+
+  /* CTA */
+  .cta-band{background:linear-gradient(120deg,var(--primary),var(--accent)); border-radius:24px; padding:52px; text-align:center; color:#fff;}
+  .cta-band h2{font-size:28px; font-weight:800;}
+  .cta-band p{margin-top:12px; color:#DCEAF7; font-size:15px;}
+  .cta-band .btn-primary{background:#fff; color:var(--primary); box-shadow:0 10px 24px rgba(0,0,0,0.2); margin-top:24px;}
+  .cta-band .btn-primary:hover{color:var(--accent);}
+
+  footer{padding:36px 0; text-align:center; font-size:12.5px; color:var(--muted);}
+
+  @media (max-width:920px){
+    .hero-grid{grid-template-columns:1fr;}
+    .steps{grid-template-columns:repeat(2,1fr);}
+    .feat-grid{grid-template-columns:repeat(2,1fr);}
+    .compare-grid{grid-template-columns:1fr;}
+    .roadmap-grid{grid-template-columns:repeat(2,1fr);}
+    .mockup-stage{margin-top:36px;}
+    .float-badge{display:none;}
+  }
+  @media (max-width:600px){
+    .hero h1{font-size:32px;}
+    .steps{grid-template-columns:1fr;}
+    .feat-grid{grid-template-columns:1fr;}
+    .roadmap-grid{grid-template-columns:1fr;}
+    .navlinks{display:none;}
+    .compare-wrap, .cta-band{padding:28px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand"><span class="dot"></span> Gacha Dynamic</div>
+    <div class="navlinks">
+      <a href="#cara-kerja">Cara Kerja</a>
+      <a href="#perbandingan">Perbandingan Konsep</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+    <span class="tag-pill">● Konsep Baru — 19 Agt 2026</span>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">✦ Presentasi Konsep untuk Klien</span>
+      <h1>Bangun halaman apa pun, <span>tanpa tulis kode, tanpa deploy ulang.</span></h1>
+      <p class="lead">Gacha Dynamic adalah platform visual page builder: admin cukup drag, drop, dan atur elemen langsung di kanvas — teks, gambar, tombol, form — lalu tekan Simpan dan perubahan langsung tayang. Ini fondasi baru yang menggantikan rencana 13 halaman tetap pada draf sebelumnya.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#cara-kerja">Lihat Cara Kerja ↓</a>
+        <a class="btn btn-ghost" href="#roadmap">Rencana Fitur Gacha →</a>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><b>4</b><span>Tipe elemen berjalan hari ini</span></div>
+        <div class="stat"><b>390px</b><span>Kanvas desain, auto-scale ke semua device</span></div>
+        <div class="stat"><b>∞</b><span>Bahasa konten, bisa ditambah kapan saja</span></div>
+        <div class="stat"><b>5</b><span>Widget gacha di roadmap berikutnya</span></div>
+      </div>
+    </div>
+
+    <div class="mockup-stage">
+      <div class="float-badge fb1"><span class="ic"></span> Drag &amp; resize bebas posisi</div>
+      <div class="float-badge fb2"><span class="ic"></span> Simpan sekali, langsung tayang</div>
+      <div class="float-badge fb3"><span class="ic"></span> Auto-scale ke semua layar</div>
+
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="notch"></div>
+          <div class="m-header">
+            <div class="logo-c"></div>
+            <div class="h-lang"><span class="active">ID</span><span>EN</span><span>JA</span></div>
+          </div>
+          <div class="m-body">
+            <div class="snap-line snap-v"></div>
+            <div class="snap-label">snap tengah</div>
+
+            <div class="m-el m-hero-text">
+              <div class="kicker">Promo Spesial</div>
+              <h4>Kumpulkan Poin, Menangkan Hadiah</h4>
+            </div>
+
+            <div class="m-el m-image m-selected">
+              <div class="handle h-tl"></div><div class="handle h-tr"></div>
+              <div class="handle h-bl"></div><div class="handle h-br"></div>
+              <div class="m-toolbar">
+                <div class="ti">Aa</div><div class="ti">🎨</div><div class="ti">🌐</div><div class="ti">⧉</div>
+              </div>
+            </div>
+
+            <div class="m-el m-button">Klaim Sekarang</div>
+
+            <div class="m-add-btn">+</div>
+          </div>
+          <div class="m-footer">© Gacha Dynamic · dibuat lewat canvas builder</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cara-kerja">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Cara Kerja</span>
+      <h2>Empat langkah, tanpa developer</h2>
+      <p>Semua yang terlihat pada mockup di atas adalah representasi dari alur kerja nyata yang sudah berjalan hari ini.</p>
+    </div>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h4>Masuk sebagai Admin</h4>
+        <p>Tekan kombinasi tombol rahasia untuk memunculkan login — tidak perlu halaman admin terpisah yang bisa ditemukan orang lain.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h4>Aktifkan Mode Edit</h4>
+        <p>Setelah login, nyalakan Mode Edit — seluruh elemen di halaman langsung bisa di-drag, di-resize, dan ditata ulang bebas.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h4>Susun & Sesuaikan</h4>
+        <p>Tambah teks/gambar/tombol/form dari menu "+", atur bahasa, warna, font, dan aksi klik langsung dari toolbar elemen.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <h4>Simpan — Langsung Tayang</h4>
+        <p>Satu tombol Simpan mengunci semua perubahan sekaligus. Tidak ada proses build atau deploy ulang yang menunggu.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="perbandingan">
+  <div class="wrap">
+    <div class="compare-wrap">
+      <div class="compare-head">
+        <h2>Dari 13 Halaman Tetap, Menjadi Satu Platform Builder</h2>
+        <p>Ringkasan perubahan arah dari rencana Scope of Work sebelumnya ke implementasi yang berjalan hari ini.</p>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-col old">
+          <h3>📋 Rencana Awal (13 Halaman Tetap)</h3>
+          <ul>
+            <li>13 halaman fitur tetap yang ditulis khusus per fitur</li>
+            <li>Posisi elemen mengikuti grid 9-titik yang diskrit</li>
+            <li>Ukuran elemen dikonversi manual ke vw + clamp()</li>
+            <li>Butuh halaman/route login admin tersendiri</li>
+            <li>Bahasa konten dibatasi ke Indonesia/Inggris/Jepang</li>
+            <li>Page Builder hanya jadi fitur tambahan di luar 13 halaman</li>
+          </ul>
+        </div>
+        <div class="compare-col new">
+          <h3>🚀 Implementasi Aktual (Canvas Builder)</h3>
+          <ul>
+            <li>Kanvas generik — jumlah & jenis halaman bebas ditambah admin</li>
+            <li>Posisi bebas penuh dengan snap magnetis ke elemen lain</li>
+            <li>Satu kanvas desain 390px yang auto-scale ke semua layar</li>
+            <li>Login admin lewat kombinasi tombol rahasia, tanpa route publik</li>
+            <li>Bahasa konten tanpa batas, admin bisa tambah kapan saja</li>
+            <li>Canvas Builder inilah fondasi utama — fitur gacha dibangun di atasnya</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Rencana Pengembangan Berikutnya</span>
+      <h2>Widget Gacha di Atas Fondasi Builder</h2>
+      <p>Kanvas drag-drop yang menjadi fondasi (penataan bebas, multi-bahasa, aksi klik, hingga manajemen halaman) adalah tempat kelima widget berikut akan dibangun — tiap widget hadir sebagai tipe elemen baru yang bisa langsung ditaruh di kanvas, otomatis mewarisi seluruh fondasi tersebut tanpa dibangun ulang dari nol.</p>
+    </div>
+    <div class="roadmap-grid">
+      <div class="rm-card">
+        <div class="rm-top"><div class="rm-ic">🎡</div><span class="rm-status">Belum Dikerjakan</span></div>
+        <h4>Spin Wheel</h4>
+        <p>Putar roda hadiah per lokasi. Hasil acak dihitung aman di server, bukan di perangkat pengguna.</p>
+      </div>
+      <div class="rm-card">
+        <div class="rm-top"><div class="rm-ic">🧩</div><span class="rm-status">Belum Dikerjakan</span></div>
+        <h4>Character Grid</h4>
+        <p>Menampilkan koleksi karakter yang sudah dimiliki tiap pengguna.</p>
+      </div>
+      <div class="rm-card">
+        <div class="rm-top"><div class="rm-ic">🔒</div><span class="rm-status">Belum Dikerjakan</span></div>
+        <h4>Access Condition (PIN Gate)</h4>
+        <p>Kunci elemen apa pun sampai syarat tertentu terpenuhi — mis. PIN, quiz, atau scan selesai.</p>
+      </div>
+      <div class="rm-card">
+        <div class="rm-top"><div class="rm-ic">📷</div><span class="rm-status">Belum Dikerjakan</span></div>
+        <h4>Camera Scanner</h4>
+        <p>Pindai barcode/QR lewat kamera perangkat untuk mendapatkan poin.</p>
+      </div>
+      <div class="rm-card">
+        <div class="rm-top"><div class="rm-ic">🎁</div><span class="rm-status">Belum Dikerjakan</span></div>
+        <h4>Redeem Catalog</h4>
+        <p>Katalog hadiah dengan syarat kelayakan per item dan form penukaran poin.</p>
+      </div>
+    </div>
+    <div class="rm-note">Setiap widget di atas ditempatkan lewat drag-drop yang sama seperti elemen yang sudah ada — bedanya, tiap widget membawa logika bisnis dan koneksi backend-nya sendiri.</div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cta-band">
+      <h2>Satu Fondasi, Tak Terbatas Kemungkinan Halaman</h2>
+      <p>Detail teknis lengkap tersedia di dokumen Scope of Work dan dokumen Konsep Teknis Page Builder yang menyertai presentasi ini.</p>
+      <a class="btn btn-primary" href="#cara-kerja">Diskusikan Detail Implementasi</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Disusun untuk DTN Claude · Project Gacha Dynamic · 19 Agustus 2026</div>
+</footer>
+
+</body>
+</html>

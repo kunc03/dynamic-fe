@@ -1,3 +1,22 @@
+<script setup lang="ts">
+const route = useRoute()
+const bg = useBackgroundStore()
+const adminAuth = useAdminAuthStore()
+
+const currentPageKey = computed(() => {
+  const slug = route.params.slug
+  return typeof slug === 'string' && slug ? slug : 'home'
+})
+
+watch(
+  [currentPageKey, () => adminAuth.isEditMode, () => bg.draftPageBackgrounds, () => bg.pageBackgrounds],
+  () => {
+    bg.applyCurrentPageBackground(currentPageKey.value)
+  },
+  { immediate: true, deep: true }
+)
+</script>
+
 <template>
   <UApp>
     <!-- Wrapper mobile-width: didesain tetap 390px, di-center (desktop)
@@ -9,22 +28,18 @@
       <!--
         Header GLOBAL (muncul di semua halaman) — DI DALAM .app-shell biar
         lebarnya ikut kebatasi 390px, DI ATAS <NuxtLayout> biar selalu di
-        paling atas. Isinya dikelola lewat canvas sendiri (lihat
-        SiteHeader.vue) — beda dari konten halaman yang per-halaman.
+        paling atas (fixed di atas content).
       -->
       <SiteHeader />
 
-      <!-- Pemilih bahasa (ID/EN/JA) buat SEMUA pengunjung (bukan cuma
-           admin) — lihat LanguageSwitcher.vue kenapa ini DI DALAM
-           .app-shell (beda dari cluster ikon admin di bawah yang sengaja
-           di luar). -->
-      <LanguageSwitcher />
+      <!-- Area Scroll Konten Halaman (Independent Scroll) -->
+      <div class="app-content-scroll">
+        <NuxtLayout>
+          <NuxtPage />
+        </NuxtLayout>
+      </div>
 
-      <NuxtLayout>
-        <NuxtPage />
-      </NuxtLayout>
-
-      <!-- Pasangan SiteHeader di atas, buat footer — lihat SiteFooter.vue. -->
+      <!-- Pasangan SiteHeader di atas, buat footer (fixed di bawah content). -->
       <SiteFooter />
 
       <!--
@@ -32,49 +47,28 @@
         Harus di dalam .app-shell (bukan teleport ke <body>, lihat prop
         `portal="false"` di komponennya) supaya lebarnya ikut kebatasi 390px.
       -->
-      <AdminLoginModal />
+      <ClientOnly>
+        <AdminLoginModal />
+      </ClientOnly>
     </div>
 
-    <!--
-      Ikon-ikon edit mode admin/superadmin — sengaja di LUAR .app-shell (bukan
-      dibatasi 390px) karena mereka nempel di area putih kiri-kanan, relatif
-      ke viewport asli. Cluster kiri (top-4, top-20, top-36, top-52, ...)
-      ditambah satu per satu tiap ada tool baru; SATU tombol Save terpisah
-      di kanan atas buat commit SEMUA tool sekaligus.
-
-      - EditModeToggle (top-4)              = ikon utama, nyala/matiin edit
-        mode.
-      - OuterBackgroundButton (top-20)      = ubah background CONTENT
-        (bagian DALAM app-shell) — posisi tombolnya aja yang di luar.
-      - SectionVisibilityButton (top-36)    = toggle tampil/sembunyiin
-        header & footer GLOBAL (lihat sectionVisibility.ts, SiteHeader.vue,
-        SiteFooter.vue). Isi header/footer sendiri diedit LANGSUNG di
-        canvas-nya masing-masing (tombol "+" tambah elemen sekarang nempel
-        LOKAL di tiap canvas — lihat CanvasEditor.vue — bukan tombol global
-        terpisah kayak AddCanvasElementButtons.vue yang lama, soalnya
-        sekarang ada 3 canvas sekaligus di layar yang sama: header + content
-        + footer, jadi tombol "+" harus jelas nunjuk ke canvas yang mana).
-      - FontPresetsButton (top-52)          = kelola preset tipografi global
-        (Primary/Secondary/dst) yang direferensi elemen teks canvas lewat
-        dropdown font di toolbar elemen terpilih (lihat fontPresets.ts).
-      - SaveEditsButton (kanan atas)        = commit draft dari SEMUA tool
-        di atas (background + canvas content/header/footer + font presets +
-        visibilitas header/footer) sekaligus, cuma muncul kalau ada yang
-        belum disimpan.
-
-      Cluster KANAN (top-20, ...) beda dari cluster kiri — bukan setting
-      tampilan global, tapi navigasi & manajemen daftar HALAMAN (multi-page,
-      lihat stores/pages.ts & app/pages/[slug].vue):
-      - PagesPanel (top-20 right-4)         = daftar halaman (Beranda +
-        halaman tambahan) buat pindah-edit, + form tambah halaman baru
-        (judul & slug/route-nya).
-    -->
+  <!--
+    Ikon-ikon edit mode admin/superadmin — sengaja di LUAR .app-shell (bukan
+    dibatasi 390px) karena mereka nempel di area putih kiri-kanan, relatif
+    ke viewport asli.
+  -->
+  <ClientOnly>
     <EditModeToggle />
-    <OuterBackgroundButton />
+    <LanguageSwitcher />
     <SectionVisibilityButton />
     <FontPresetsButton />
+    <LanguageManagerButton />
+    <OnClickActionButton />
+    <AdminLogoutButton />
     <PagesPanel />
     <SaveEditsButton />
+    <PageClickDialogModal />
+  </ClientOnly>
 
     <!--
       Gak nge-render apa-apa — cuma nge-set CSS var `--app-scale` ke <html>

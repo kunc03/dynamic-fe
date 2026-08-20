@@ -21,7 +21,8 @@ const { t } = useI18n()
       variant="solid"
       size="lg"
       square
-      class="size-11 shrink-0 justify-center shadow-lg cursor-pointer"
+      class="size-11 shrink-0 justify-center shadow-lg cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+      :class="adminAuth.isEditMode ? 'ring-2 ring-primary ring-offset-2' : ''"
       :aria-label="adminAuth.isEditMode ? t('admin.editMode.closeAria') : t('admin.editMode.openAria')"
       @click="adminAuth.toggleEditMode()"
     />

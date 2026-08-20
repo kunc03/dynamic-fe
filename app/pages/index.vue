@@ -17,7 +17,7 @@ const contentMinHeight = useContentMinHeight()
 </script>
 
 <template>
-  <div class="relative" :style="{ minHeight: contentMinHeight }">
+  <div class="relative w-full flex-1 flex flex-col" :style="{ minHeight: contentMinHeight }">
     <CanvasEditor page-key="home" />
   </div>
 </template>

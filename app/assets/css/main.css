@@ -98,15 +98,10 @@ body {
     tengah total tinggi konten kalau kontennya panjang dan di-scroll.
   */
   height: calc(100dvh / var(--app-scale, 1));
-  overflow-y: auto;
-  /* Konten mobile gak boleh geser ke samping — kalau ada elemen yang
-     kelebaran dari 390px, dia dipotong, bukan bikin scrollbar horizontal. */
-  overflow-x: hidden;
-
-  /* Sembunyikan scrollbar bawaan browser (kasar & gak app-like), tapi
-     scroll-nya sendiri tetap jalan normal lewat mouse/trackpad/sentuh. */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Edge lama */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
 
   /*
     `scale(var(--app-scale))` — INI yang bikin .app-shell (390px lebar
@@ -125,8 +120,14 @@ body {
   transform-origin: top left;
 }
 
-.app-shell::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge baru */
+.app-content-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 /*
@@ -153,3 +154,56 @@ body {
     margin-inline: 0;
   }
 }
+
+/* Pastikan teks tooltip tidak terpotong bagian bawahnya (descender huruf g, j, p, q, y) */
+[role="tooltip"],
+[data-reka-tooltip-content],
+[data-radix-tooltip-content] {
+  padding-block: 0.375rem !important; /* py-1.5 */
+  padding-inline: 0.625rem !important; /* px-2.5 */
+  line-height: 1.4 !important;
+  min-height: auto !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+/* 
+  Custom Sleek & Minimal Scrollbar untuk seluruh panel popover, modal, dan list
+  Menyatu dengan tampilan dark mode & UI modern (halus, rounded, transparan)
+*/
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(16, 185, 129, 0.7); /* Aksen Emerald lembut saat di-drag */
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+

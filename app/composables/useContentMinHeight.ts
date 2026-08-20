@@ -14,11 +14,6 @@
 // dirender sekarang (headerRenderedHeight/footerRenderedHeight di
 // sectionVisibility.ts) supaya kalau isi canvas-nya pendek, semua muat
 // satu layar tanpa footer ke-dorong keluar.
-export function useContentMinHeight() {
-  const sections = useSectionVisibilityStore()
-
-  return computed(
-    () =>
-      `calc((100dvh / var(--app-scale, 1)) - ${sections.headerRenderedHeight}px - ${sections.footerRenderedHeight}px)`
-  )
+export function useContentMinHeight(_customPageKey?: string) {
+  return computed(() => '100%')
 }

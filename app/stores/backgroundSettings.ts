@@ -2,50 +2,52 @@ import { defineStore } from 'pinia'
 
 export type BackgroundMode = 'color' | 'image'
 
-// Pengaturan background CONTENT (bagian DALAM app-shell / "layar HP"-nya
-// sendiri) — BUKAN area putih di luar container. Sumber kebenarannya sekarang
-// tabel `site_settings` di Supabase (kolom content_bg_*, lihat migration
-// 0012_content_background_setting.sql di project `be`), bukan localStorage
-// lagi, supaya SEMUA pengunjung lihat background yang sama — bukan cuma
-// browser admin yang pernah nge-set.
-//
-// Ada dua "lapis" state di sini:
-//   - mode/color/imageDataUrl  = state TERSIMPAN (sudah di database, ini
-//     yang dilihat SEMUA pengunjung & yang dipakai buat apply() ulang tiap
-//     kali app di-reload).
-//   - draftMode/draftColor/draftImageDataUrl = state yang lagi DIEDIT admin
-//     di panel (lihat OuterBackgroundButton.vue). Begitu draft ini berubah,
-//     LANGSUNG di-apply ke <html> juga (live preview, lihat applyDraft())
-//     supaya admin bisa lihat hasilnya di background asli — TAPI belum
-//     ditulis ke database sampai admin klik tombol Save (lihat
-//     SaveContentBackgroundButton.vue). Kalau admin reload tanpa Save,
-//     load() akan nimpa lagi pakai state TERSIMPAN dari database, jadi
-//     preview yang belum di-save otomatis "hilang" (memang belum pernah
-//     kesimpan) — bukan bug.
-export const useBackgroundStore = defineStore('backgroundSettings', () => {
-  const mode = ref<BackgroundMode>('color')
-  const color = ref<string | null>(null)
-  const imageDataUrl = ref<string | null>(null)
+export interface PageBackground {
+  mode: BackgroundMode
+  color: string | null
+  imageDataUrl: string | null
+}
 
-  const draftMode = ref<BackgroundMode>('color')
-  const draftColor = ref<string | null>(null)
-  const draftImageDataUrl = ref<string | null>(null)
+const DEFAULT_PAGE_BG: PageBackground = {
+  mode: 'color',
+  color: null,
+  imageDataUrl: null
+}
+
+// Pengaturan background CONTENT per halaman (`page_key`). Sumber kebenarannya
+// tabel `canvas_page_backgrounds` di Supabase (lihat migration 0028_canvas_page_backgrounds.sql).
+// Tiap halaman (mis. 'home', 'register', 'dashboard-v2') memiliki background
+// (warna / gambar) masing-masing yang independen.
+export const useBackgroundStore = defineStore('backgroundSettings', () => {
+  const pageBackgrounds = ref<Record<string, PageBackground>>({})
+  const draftPageBackgrounds = ref<Record<string, PageBackground>>({})
 
   const saving = ref(false)
   const error = ref<string | null>(null)
 
-  // Ada perubahan yang belum disimpan? Dipakai SaveContentBackgroundButton.vue
-  // buat nentuin kapan tombol Save-nya muncul.
-  const isDirty = computed(() =>
-    draftMode.value !== mode.value
-    || draftColor.value !== color.value
-    || draftImageDataUrl.value !== imageDataUrl.value
-  )
+  function getPageBackground(pageKey: string): PageBackground {
+    return pageBackgrounds.value[pageKey] || { ...DEFAULT_PAGE_BG }
+  }
 
-  // Helper bersama: terapkan satu set nilai (mode/color/image) ke <html>.
-  // Dipakai oleh apply() (state TERSIMPAN) & applyDraft() (state DRAFT,
-  // buat live preview) supaya logic nge-set/hapus custom property-nya gak
-  // dobel-nulis di dua tempat.
+  function getDraftPageBackground(pageKey: string): PageBackground {
+    return draftPageBackgrounds.value[pageKey] || getPageBackground(pageKey)
+  }
+
+  function isPageDirty(pageKey: string): boolean {
+    const saved = getPageBackground(pageKey)
+    const draft = getDraftPageBackground(pageKey)
+    return saved.mode !== draft.mode || saved.color !== draft.color || saved.imageDataUrl !== draft.imageDataUrl
+  }
+
+  const isDirty = computed(() => {
+    const allKeys = new Set([...Object.keys(pageBackgrounds.value), ...Object.keys(draftPageBackgrounds.value)])
+    for (const key of allKeys) {
+      if (isPageDirty(key)) return true
+    }
+    return false
+  })
+
+  // Helper bersama: terapkan satu set nilai (mode/color/image) ke CSS variables <html>
   function applyValues(m: BackgroundMode, c: string | null, img: string | null) {
     if (import.meta.server) return
 
@@ -58,80 +60,91 @@ export const useBackgroundStore = defineStore('backgroundSettings', () => {
       root.style.setProperty('--app-content-bg-color', c)
       root.style.setProperty('--app-content-bg-image', 'none')
     } else {
-      // Belum pernah di-custom — hapus override-nya biar CSS fallback di
-      // main.css balik ke --ui-bg.
       root.style.removeProperty('--app-content-bg-color')
       root.style.removeProperty('--app-content-bg-image')
     }
   }
 
-  // Terapkan state TERSIMPAN ke <html>. Dipanggil dari load() pas app jalan.
-  function apply() {
-    applyValues(mode.value, color.value, imageDataUrl.value)
+  function applyCurrentPageBackground(pageKey: string) {
+    const adminAuth = useAdminAuthStore()
+    const isEdit = adminAuth.isAuthenticated && adminAuth.isEditMode
+    const bg = isEdit ? getDraftPageBackground(pageKey) : getPageBackground(pageKey)
+    applyValues(bg.mode, bg.color, bg.imageDataUrl)
   }
 
-  // Terapkan state DRAFT ke <html> — INI yang bikin live preview: begitu
-  // admin ganti warna/upload gambar di panel, background asli LANGSUNG
-  // berubah, walau belum kesimpan ke database. Dipanggil dari
-  // setDraftColor/setDraftImageFile/resetDraftToThemeDefault.
-  function applyDraft() {
-    applyValues(draftMode.value, draftColor.value, draftImageDataUrl.value)
-  }
-
-  // Sinkronkan draft dari nilai tersimpan sekarang — dipanggil dari load()
-  // di awal.
   function resetDraft() {
-    draftMode.value = mode.value
-    draftColor.value = color.value
-    draftImageDataUrl.value = imageDataUrl.value
+    draftPageBackgrounds.value = JSON.parse(JSON.stringify(pageBackgrounds.value))
   }
 
-  // Ambil setting tersimpan dari `site_settings` (baris singleton id=1) &
-  // terapkan ke <html>. Dipanggil sekali dari
-  // app/plugins/background-settings.client.ts pas app pertama kali jalan.
   async function load() {
     if (import.meta.server) return
 
     const supabase = useSupabaseClient()
 
-    const { data, error: fetchError } = await supabase
-      .from('site_settings')
-      .select('content_bg_mode, content_bg_color, content_bg_image')
-      .eq('id', 1)
-      .single()
+    // 1. Ambil dari canvas_page_backgrounds
+    const { data: pageBgs } = await supabase
+      .from('canvas_page_backgrounds')
+      .select('page_key, bg_mode, bg_color, bg_image')
 
-    if (!fetchError && data) {
-      mode.value = data.content_bg_mode === 'image' ? 'image' : 'color'
-      color.value = data.content_bg_color ?? null
-      imageDataUrl.value = data.content_bg_image ?? null
+    const map: Record<string, PageBackground> = {}
+
+    if (pageBgs && pageBgs.length > 0) {
+      for (const row of pageBgs) {
+        map[row.page_key] = {
+          mode: row.bg_mode === 'image' ? 'image' : 'color',
+          color: row.bg_color ?? null,
+          imageDataUrl: row.bg_image ?? null
+        }
+      }
     }
-    // Kalau fetch gagal (mis. offline) — biarin default (mode='color',
-    // color=null), CSS fallback ke --ui-bg tetap jalan, gak nge-blank-in app.
 
+    // 2. Fallback untuk 'home' jika belum ada di canvas_page_backgrounds
+    if (!map.home) {
+      const { data: siteSettings } = await supabase
+        .from('site_settings')
+        .select('content_bg_mode, content_bg_color, content_bg_image')
+        .eq('id', 1)
+        .single()
+
+      if (siteSettings && (siteSettings.content_bg_color || siteSettings.content_bg_image)) {
+        map.home = {
+          mode: siteSettings.content_bg_mode === 'image' ? 'image' : 'color',
+          color: siteSettings.content_bg_color ?? null,
+          imageDataUrl: siteSettings.content_bg_image ?? null
+        }
+      }
+    }
+
+    pageBackgrounds.value = map
     resetDraft()
-    apply()
   }
 
-  // Dipanggil dari input warna di panel (lihat OuterBackgroundButton.vue).
-  // Update draft & LANGSUNG live-preview ke background asli (applyDraft) —
-  // tapi database BELUM berubah sampai klik Save.
-  function setDraftColor(next: string) {
-    draftMode.value = 'color'
-    draftColor.value = next
-    draftImageDataUrl.value = null
-    applyDraft()
+  function setDraftPageColor(pageKey: string, next: string) {
+    draftPageBackgrounds.value = {
+      ...draftPageBackgrounds.value,
+      [pageKey]: {
+        mode: 'color',
+        color: next,
+        imageDataUrl: null
+      }
+    }
+    applyCurrentPageBackground(pageKey)
   }
 
-  // Dipanggil dari file input di panel. Sama kayak setDraftColor, live
-  // preview langsung, database belum berubah.
-  function setDraftImageFile(file: File) {
+  function setDraftPageImageFile(pageKey: string, file: File) {
     return new Promise<void>((resolve, reject) => {
       const reader = new FileReader()
 
       reader.onload = () => {
-        draftMode.value = 'image'
-        draftImageDataUrl.value = reader.result as string
-        applyDraft()
+        draftPageBackgrounds.value = {
+          ...draftPageBackgrounds.value,
+          [pageKey]: {
+            mode: 'image',
+            color: null,
+            imageDataUrl: reader.result as string
+          }
+        }
+        applyCurrentPageBackground(pageKey)
         resolve()
       }
 
@@ -140,21 +153,18 @@ export const useBackgroundStore = defineStore('backgroundSettings', () => {
     })
   }
 
-  // Tombol "Reset ke default" di panel — langsung live-preview balik ke
-  // fallback tema juga, tetap butuh Save buat benar-benar kesimpan ke
-  // database, konsisten sama aksi lain di panel ini.
-  function resetDraftToThemeDefault() {
-    draftMode.value = 'color'
-    draftColor.value = null
-    draftImageDataUrl.value = null
-    applyDraft()
+  function resetDraftPageToDefault(pageKey: string) {
+    draftPageBackgrounds.value = {
+      ...draftPageBackgrounds.value,
+      [pageKey]: {
+        mode: 'color',
+        color: null,
+        imageDataUrl: null
+      }
+    }
+    applyCurrentPageBackground(pageKey)
   }
 
-  // Commit draft -> tersimpan: kirim ke RPC `update_content_background`
-  // (SECURITY DEFINER, cek is_admin() sendiri di server — lihat migration
-  // 0012_content_background_setting.sql di project `be`), baru kalau
-  // sukses apply ke <html>. Dipanggil dari tombol Save
-  // (SaveContentBackgroundButton.vue).
   async function save() {
     if (import.meta.server || !isDirty.value) return
 
@@ -164,41 +174,73 @@ export const useBackgroundStore = defineStore('backgroundSettings', () => {
     const supabase = useSupabaseClient()
 
     try {
-      const { error: rpcError } = await supabase.rpc('update_content_background', {
-        p_mode: draftMode.value,
-        p_color: draftColor.value,
-        p_image: draftImageDataUrl.value
-      })
+      const allKeys = new Set([...Object.keys(pageBackgrounds.value), ...Object.keys(draftPageBackgrounds.value)])
+      for (const pageKey of allKeys) {
+        if (isPageDirty(pageKey)) {
+          const draftBg = getDraftPageBackground(pageKey)
+          const { error: rpcError } = await supabase.rpc('save_page_background', {
+            p_page_key: pageKey,
+            p_bg: {
+              mode: draftBg.mode,
+              color: draftBg.color,
+              imageDataUrl: draftBg.imageDataUrl
+            }
+          })
 
-      if (rpcError) throw rpcError
+          if (rpcError) {
+            // Fallback ke update_content_background jika home dan fungsi baru belum tersedia
+            if (pageKey === 'home') {
+              await supabase.rpc('update_content_background', {
+                p_mode: draftBg.mode,
+                p_color: draftBg.color,
+                p_image: draftBg.imageDataUrl
+              })
+            } else {
+              throw rpcError
+            }
+          }
+        }
+      }
 
-      mode.value = draftMode.value
-      color.value = draftColor.value
-      imageDataUrl.value = draftImageDataUrl.value
-      apply()
+      pageBackgrounds.value = JSON.parse(JSON.stringify(draftPageBackgrounds.value))
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Gagal menyimpan background.'
+      error.value = e instanceof Error ? e.message : 'Gagal menyimpan background halaman.'
       throw e
     } finally {
       saving.value = false
     }
   }
 
+  // Kompatibilitas mundur untuk 'home'
+  const mode = computed(() => getPageBackground('home').mode)
+  const color = computed(() => getPageBackground('home').color)
+  const imageDataUrl = computed(() => getPageBackground('home').imageDataUrl)
+  const draftMode = computed(() => getDraftPageBackground('home').mode)
+  const draftColor = computed(() => getDraftPageBackground('home').color)
+  const draftImageDataUrl = computed(() => getDraftPageBackground('home').imageDataUrl)
+
   return {
+    pageBackgrounds,
+    draftPageBackgrounds,
+    isDirty,
+    saving,
+    error,
     mode,
     color,
     imageDataUrl,
     draftMode,
     draftColor,
     draftImageDataUrl,
-    isDirty,
-    saving,
-    error,
+    getPageBackground,
+    getDraftPageBackground,
+    isPageDirty,
+    setDraftPageColor,
+    setDraftPageImageFile,
+    resetDraftPageToDefault,
+    applyCurrentPageBackground,
     load,
     resetDraft,
-    setDraftColor,
-    setDraftImageFile,
-    resetDraftToThemeDefault,
     save
   }
 })
+

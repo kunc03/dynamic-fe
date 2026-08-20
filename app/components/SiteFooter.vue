@@ -7,7 +7,14 @@ import { FOOTER_PAGE_KEY } from '../stores/canvasElements'
 // tinggi & clip-overflow yang bisa diatur admin, & kenapa logic
 // tampil/sembunyi ada di sectionVisibility.ts — sama persis, cuma buat
 // footer.
+const route = useRoute()
 const sections = useSectionVisibilityStore()
+const currentPageKey = computed(() => {
+  const slug = route.params.slug
+  return typeof slug === 'string' && slug ? slug : 'home'
+})
+
+const shouldRender = computed(() => sections.isFooterVisible(currentPageKey.value))
 
 const backgroundStyle = computed(() => {
   const mode = sections.isEditable ? sections.draftFooterBgMode : sections.footerBgMode
@@ -32,18 +39,10 @@ const backgroundStyle = computed(() => {
 
 <template>
   <div
-    v-if="sections.footerShouldRender"
-    class="relative w-full"
-    :class="{ 'border border-dashed border-default': !sections.footerIsVisible }"
+    v-if="shouldRender"
+    class="relative w-full shrink-0 z-20"
     :style="[{ height: `${sections.footerEffectiveHeight}px` }, backgroundStyle]"
   >
-    <span
-      v-if="!sections.footerIsVisible"
-      class="pointer-events-none absolute left-1 top-1 z-20 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white"
-    >
-      Footer disembunyikan dari pengunjung
-    </span>
-
     <CanvasEditor :page-key="FOOTER_PAGE_KEY" :clip-overflow="sections.footerEffectiveClipOverflow" />
   </div>
 </template>

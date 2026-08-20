@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gacha Dynamic — Prototype Desain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#16202A; --primary:#0EA968; --accent:#1DC97B; --accent-light:#6EE7A8;
+    --accent-bg:#E5F9EF; --dark-btn:#16202A;
+    --bg:#F5F8FC; --card:#FFFFFF; --text:#152332; --muted:#5B6B7A; --border:#E2E8F0;
+    --gold:#E8A63D; --gold-bg:#FDF1DF;
+    --shadow:0 8px 30px rgba(15,41,66,0.08); --shadow-lg:0 22px 60px rgba(15,41,66,0.18);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Inter',system-ui,sans-serif; color:var(--text); background:var(--bg); line-height:1.6;}
+  h1,h2,h3,h4{font-family:'Poppins','Inter',sans-serif; margin:0;}
+  p{margin:0;}
+  .wrap{max-width:1200px; margin:0 auto; padding:0 28px;}
+
+  header.top{background:#fff; border-bottom:1px solid var(--border); padding:18px 0;}
+  .top-inner{display:flex; align-items:center; justify-content:space-between; max-width:1200px; margin:0 auto; padding:0 28px;}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; color:var(--primary);}
+  .brand .dot{width:12px; height:12px; border-radius:4px; background:linear-gradient(135deg,var(--accent),var(--accent-light)); display:inline-block; transform:rotate(45deg);}
+  .tag-pill{font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:99px; background:var(--gold-bg); color:#9A6A15;}
+
+  .notice-bar{background:#FFF7E6; border-bottom:1px solid #F3DFB0;}
+  .notice-inner{display:flex; align-items:flex-start; gap:12px; padding:12px 28px; max-width:1200px; margin:0 auto;}
+  .notice-ic{flex:none; font-size:15px;}
+  .notice-bar p{font-size:13px; color:#7A5A16; line-height:1.5;}
+
+  .page-head{text-align:center; padding:52px 0 8px;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--primary); background:var(--accent-bg); padding:6px 14px; border-radius:99px; margin-bottom:16px;}
+  .page-head h1{font-size:34px; font-weight:800; color:var(--navy); letter-spacing:-0.01em;}
+  .page-head p{max-width:620px; margin:14px auto 0; color:var(--muted); font-size:15px;}
+
+  section{padding:44px 0;}
+  .section-tag{display:flex; align-items:center; gap:12px; margin-bottom:8px;}
+  .section-tag .n{width:28px; height:28px; border-radius:9px; background:var(--navy); color:#fff; font-family:'Poppins'; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex:none;}
+  .section-tag h2{font-size:22px; font-weight:800; color:var(--navy);}
+  .section-sub{color:var(--muted); font-size:14px; margin:8px 0 30px 40px; max-width:640px;}
+
+  /* ===== PHONE SCREENS (End-user) ===== */
+  .phone-row{display:flex; gap:22px; overflow-x:auto; padding:10px 4px 20px;}
+  .phone{width:225px; flex:none; background:#0d1b2a; border-radius:30px; padding:10px; box-shadow:var(--shadow-lg); position:relative;}
+  .phone-cap{text-align:center; font-size:12.5px; font-weight:700; color:var(--navy); margin-top:12px;}
+  .notch{position:absolute; top:8px; left:50%; transform:translateX(-50%); width:56px; height:13px; background:#0d1b2a; border-radius:8px; z-index:5;}
+  .screen{background:#fff; border-radius:20px; overflow:hidden; height:430px; display:flex; flex-direction:column; position:relative;}
+  .s-header{height:40px; flex:none; background:linear-gradient(120deg,var(--primary),var(--accent)); display:flex; align-items:center; justify-content:space-between; padding:0 12px; color:#fff; font-size:11px; font-weight:700;}
+  .s-body{flex:1; overflow:hidden; background:#F4F7FB; padding:12px; display:flex; flex-direction:column; gap:10px;}
+
+  /* Dashboard */
+  .greet{font-size:13px; font-weight:700; color:var(--navy);}
+  .greet small{display:block; font-weight:500; color:var(--muted); font-size:9.5px; margin-top:1px;}
+  .point-card{background:linear-gradient(120deg,var(--navy),var(--primary)); border-radius:12px; padding:12px; color:#fff;}
+  .point-card .lbl{font-size:9px; opacity:.75; text-transform:uppercase; letter-spacing:.04em;}
+  .point-card .val{font-size:19px; font-weight:800; margin-top:2px; font-family:'Poppins';}
+  .point-bar{height:5px; background:rgba(255,255,255,.25); border-radius:99px; margin-top:8px; overflow:hidden;}
+  .point-bar i{display:block; height:100%; width:64%; background:#fff; border-radius:99px;}
+  .banner{height:52px; border-radius:12px; background:linear-gradient(135deg,#F2B84B,#E8895A); display:flex; align-items:center; padding:0 12px; color:#fff; font-size:10.5px; font-weight:700;}
+  .qgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:2px;}
+  .qgrid .q{background:#fff; border-radius:10px; padding:8px 4px; text-align:center; box-shadow:0 2px 6px rgba(15,41,66,.06);}
+  .qgrid .q .ic{font-size:16px;}
+  .qgrid .q span{display:block; font-size:8px; font-weight:700; color:var(--muted); margin-top:3px;}
+
+  /* Spin */
+  .spin-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;}
+  .wheel-holder{position:relative; width:170px; height:170px;}
+  .wheel{
+    width:170px; height:170px; border-radius:50%; position:relative;
+    background:conic-gradient(var(--accent) 0deg 45deg, var(--accent-light) 45deg 90deg, #E8A63D 90deg 135deg, #F2C879 135deg 180deg,
+      var(--accent) 180deg 225deg, var(--accent-light) 225deg 270deg, #E8A63D 270deg 315deg, #F2C879 315deg 360deg);
+    border:5px solid #fff; box-shadow:0 6px 20px rgba(15,41,66,.25);
+  }
+  .wheel::after{content:''; position:absolute; inset:0; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);}
+  .wheel-hub{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:38px; height:38px; border-radius:50%; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; font-size:15px;}
+  .wheel-pointer{position:absolute; top:-8px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-top:14px solid var(--navy); z-index:3;}
+  .spin-btn{background:var(--accent); color:#fff; font-size:12px; font-weight:800; padding:10px 26px; border-radius:99px; box-shadow:0 8px 18px rgba(46,117,182,.4);}
+  .ticket-note{font-size:10.5px; color:var(--muted); font-weight:600;}
+
+  /* Quiz */
+  .quiz-q{background:#fff; border-radius:12px; padding:12px; font-size:11.5px; font-weight:700; color:var(--navy); box-shadow:0 2px 6px rgba(15,41,66,.06);}
+  .quiz-opt{background:#fff; border:1.5px solid var(--border); border-radius:10px; padding:9px 10px; font-size:10.5px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px;}
+  .quiz-opt .dot{width:14px; height:14px; border-radius:50%; border:2px solid var(--border); flex:none;}
+  .quiz-opt.sel{border-color:var(--accent); background:var(--accent-bg);}
+  .quiz-opt.sel .dot{border-color:var(--accent); background:var(--accent);}
+  .quiz-submit{margin-top:auto; background:var(--navy); color:#fff; text-align:center; font-size:11.5px; font-weight:800; padding:10px; border-radius:10px;}
+
+  /* Character grid */
+  .char-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .char{aspect-ratio:1; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; position:relative;}
+  .char.owned{background:linear-gradient(135deg,var(--accent),var(--accent-light)); box-shadow:0 4px 10px rgba(29,201,123,.3);}
+  .char.locked{background:#E4E9EF; filter:grayscale(1); opacity:.7;}
+  .char.locked::after{content:'🔒'; position:absolute; font-size:12px; bottom:4px; right:5px;}
+  .char-title{font-size:9.5px; color:var(--muted); font-weight:700; text-align:center; margin-top:2px;}
+
+  /* Redeem */
+  .reward{background:#fff; border-radius:12px; padding:9px; display:flex; gap:9px; align-items:center; box-shadow:0 2px 6px rgba(15,41,66,.06);}
+  .reward .thumb{width:38px; height:38px; border-radius:9px; background:linear-gradient(135deg,#F2B84B,#E8895A); flex:none;}
+  .reward .info{flex:1; min-width:0;}
+  .reward .info b{font-size:10px; color:var(--navy); display:block;}
+  .reward .info span{font-size:9px; color:var(--muted);}
+  .reward .btn-r{font-size:9px; font-weight:800; background:var(--accent); color:#fff; padding:5px 9px; border-radius:8px; flex:none;}
+
+  /* ===== ADMIN BUILDER MOCKUP (mengikuti tampilan aplikasi asli) ===== */
+  .builder-frame{background:#fff; border-radius:18px; box-shadow:var(--shadow-lg); border:1px solid var(--border); padding:20px 24px; overflow:hidden;}
+
+  .b-topbar{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px;}
+  .b-topleft{display:flex; align-items:center; gap:10px;}
+  .b-close{width:44px; height:44px; border-radius:12px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800; box-shadow:0 4px 10px rgba(29,201,123,.35);}
+  .b-close-lbl{display:none;}
+  .b-lang-pill{display:flex; align-items:center; background:#fff; border:1.5px solid var(--border); border-radius:99px; padding:4px; gap:2px;}
+  .b-lang-pill span{font-size:11px; font-weight:700; padding:6px 12px; border-radius:99px; color:var(--muted);}
+  .b-lang-pill span.on{background:var(--navy); color:#fff;}
+  .b-topright{display:flex; gap:10px;}
+  .b-discard{display:flex; align-items:center; gap:7px; background:var(--dark-btn); color:#fff; font-size:13px; font-weight:700; padding:10px 18px; border-radius:10px;}
+  .b-save{display:flex; align-items:center; gap:7px; background:var(--accent); color:#fff; font-size:13px; font-weight:700; padding:10px 18px; border-radius:10px; box-shadow:0 4px 10px rgba(29,201,123,.35);}
+
+  .b-layout{display:grid; grid-template-columns:88px 1fr 240px; gap:20px; align-items:start;}
+
+  .b-tools{display:flex; flex-direction:column; gap:14px;}
+  .b-tool{display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .b-tool .ic{width:52px; height:52px; border-radius:13px; background:#fff; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:19px; color:var(--navy);}
+  .b-tool span{font-size:10px; font-weight:600; color:var(--muted); text-align:center;}
+
+  .b-canvas-wrap{display:flex; justify-content:center;}
+  .b-canvas{width:270px; background:#fff; border-radius:6px; box-shadow:0 0 0 1px var(--border); position:relative; min-height:470px; overflow:hidden;}
+  .b-c-header{height:52px; background:#EEF1F5; display:flex; align-items:center; justify-content:center; position:relative;}
+  .b-c-header h4{font-size:14.5px; font-weight:700; color:var(--text);}
+  .b-c-add{position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:7px; background:#fff; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted);}
+  .b-c-pin{position:absolute; top:8px; right:44px; font-size:15px; color:#E5484D;}
+  .b-c-body{position:relative; padding:16px 14px; display:flex; flex-direction:column; gap:12px;}
+  .b-c-field{position:relative;}
+  .b-c-field label{font-size:10.5px; font-weight:600; color:var(--text); display:block; margin-bottom:5px;}
+  .b-c-field .inp{border:1.5px solid var(--border); border-radius:8px; padding:9px 11px; font-size:10.5px; color:var(--accent-light); font-weight:600;}
+  .b-c-field.focused .inp{border-color:var(--accent); color:var(--primary);}
+  .b-c-field .fplus{position:absolute; top:-2px; right:0; width:18px; height:18px; border-radius:5px; background:#fff; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--muted);}
+
+  .b-pages{display:flex; flex-direction:column; gap:16px;}
+  .b-page-card{width:100%;}
+  .b-thumb{position:relative; width:100%; aspect-ratio:120/168; border-radius:14px; overflow:hidden; border:2px solid transparent; background:#0d1b2a;}
+  .b-thumb.selected{border-color:var(--accent);}
+  .b-badge{position:absolute; top:8px; left:8px; width:20px; height:20px; border-radius:50%; background:var(--navy); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; z-index:3;}
+  .b-badge.on{background:var(--accent);}
+  .b-thumb-img{position:absolute; inset:0; background:linear-gradient(160deg,#0d3b3f,#134656 55%,#0a1620); }
+  .b-thumb-img.reg{background:#fff;}
+  .b-thumb-cap{margin-top:8px; text-align:center;}
+  .b-thumb-cap b{font-size:11.5px; font-weight:700; color:var(--text); display:block;}
+  .b-thumb-cap.on b{color:var(--accent);}
+  .b-thumb-cap span{font-size:9.5px; color:var(--muted); font-family:monospace;}
+  .b-add-page{width:100%; aspect-ratio:120/168; border-radius:14px; border:1.5px dashed var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--muted); font-size:11px; font-weight:600; text-align:center;}
+  .b-add-page .plus{width:28px; height:28px; border-radius:50%; border:1.5px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:15px;}
+
+  .mini-reg-line{height:8px; background:#EEF1F5; border-radius:3px; margin:5px 10px;}
+
+  /* selected widget box inside the canvas mockup */
+  .cv-widget{border-radius:12px; background:linear-gradient(150deg,var(--navy),var(--primary)); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;}
+  .cv-widget .mini-wheel{width:78px; height:78px; border-radius:50%; background:conic-gradient(var(--accent) 0deg 90deg,#E8A63D 90deg 180deg,var(--accent-light) 180deg 270deg,#F2C879 270deg 360deg); border:3px solid #fff;}
+  .cv-widget .mini-btn{font-size:9.5px; font-weight:800; background:#fff; color:var(--primary); padding:5px 14px; border-radius:99px;}
+  .cv-selected{outline:2px dashed var(--accent); outline-offset:4px;}
+  .h{position:absolute; width:9px; height:9px; background:#fff; border:2px solid var(--accent); border-radius:2px; z-index:2;}
+  .h.tl{top:-6px; left:-6px;} .h.tr{top:-6px; right:-6px;} .h.bl{bottom:-6px; left:-6px;} .h.br{bottom:-6px; right:-6px;}
+
+  /* widget config callout panel */
+  .config-callout{background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px 24px; box-shadow:var(--shadow); max-width:640px;}
+  .config-callout h4{font-size:13.5px; font-weight:800; color:var(--navy); display:flex; align-items:center; gap:8px;}
+  .config-callout h4 .sq{width:22px; height:22px; border-radius:6px; background:var(--accent-bg); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:12px;}
+  .cc-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px;}
+  .field-lbl{font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:5px;}
+  .field-input{border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:11.5px; color:var(--text); background:#F9FBFD; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+  .field-input .arrow{color:var(--muted); font-size:10px;}
+  .lang-tabs{display:flex; gap:4px;}
+  .lang-tabs span{font-size:9.5px; font-weight:700; padding:4px 9px; border-radius:7px; background:#F1F4F8; color:var(--muted);}
+  .lang-tabs span.on{background:var(--accent); color:#fff;}
+  .pool-item{display:flex; align-items:center; gap:8px; font-size:10.5px;}
+  .pool-item .nm{width:56px; flex:none; color:var(--text); font-weight:600;}
+  .pool-bar{flex:1; height:7px; background:#EEF2F7; border-radius:99px; overflow:hidden;}
+  .pool-bar i{display:block; height:100%; background:var(--accent); border-radius:99px;}
+  .pool-item .pct{width:34px; text-align:right; color:var(--muted); font-weight:700; font-size:9.5px;}
+
+  @media (max-width:700px){ .cc-grid{grid-template-columns:1fr;} }
+
+  footer{padding:32px 0; text-align:center; font-size:12px; color:var(--muted);}
+
+  @media (max-width:900px){
+    .b-layout{grid-template-columns:1fr; }
+    .b-tools{flex-direction:row; flex-wrap:wrap; justify-content:center;}
+    .b-pages{flex-direction:row; flex-wrap:wrap;}
+    .b-page-card{width:120px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="dot"></span> Gacha Dynamic</div>
+    <span class="tag-pill">◆ Prototype Desain</span>
+  </div>
+</header>
+
+<div class="notice-bar">
+  <div class="notice-inner">
+    <span class="notice-ic">⚠</span>
+    <p>Ini adalah prototype visual untuk didiskusikan — tampilan, layout, dan konten masih dalam tahap perancangan dan bisa berubah sebelum implementasi final.</p>
+  </div>
+</div>
+
+<div class="page-head wrap">
+  <span class="eyebrow">✦ Satu Desain, Dua Sisi</span>
+  <h1>Prototype: Aplikasi Gacha Dynamic &amp; Canvas Builder-nya</h1>
+  <p>Bagian atas menunjukkan tampilan yang dilihat pemain (end-user). Bagian bawah menunjukkan bagaimana admin menyusun tampilan tersebut lewat Canvas Builder — tanpa menulis kode.</p>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="section-tag"><span class="n">1</span><h2>Tampilan Pemain (End-User)</h2></div>
+    <p class="section-sub">Lima layar inti dari perspektif pemain — semuanya disusun dari elemen &amp; widget yang sama yang bisa ditata admin di Canvas Builder (lihat bagian 2).</p>
+
+    <div class="phone-row">
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="s-header"><span>Gacha Dynamic</span><span>🔔</span></div>
+            <div class="s-body">
+              <div class="greet">Halo, Bunga 👋<small>Level 7 · Member Gold</small></div>
+              <div class="point-card">
+                <div class="lbl">Total Poin</div>
+                <div class="val">1.240</div>
+                <div class="point-bar"><i></i></div>
+              </div>
+              <div class="banner">🎉 Promo Akhir Pekan 2x Poin!</div>
+              <div class="qgrid">
+                <div class="q"><div class="ic">🎡</div><span>Spin</span></div>
+                <div class="q"><div class="ic">🎁</div><span>Redeem</span></div>
+                <div class="q"><div class="ic">📝</div><span>Quiz</span></div>
+                <div class="q"><div class="ic">🧩</div><span>Koleksi</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-cap">Dashboard</div>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="s-header"><span>Spin &amp; Menang</span><span>🎫 3</span></div>
+            <div class="s-body spin-wrap">
+              <div class="wheel-holder">
+                <div class="wheel-pointer"></div>
+                <div class="wheel"></div>
+                <div class="wheel-hub">🎯</div>
+              </div>
+              <div class="spin-btn">Putar Sekarang</div>
+              <div class="ticket-note">3 tiket tersisa hari ini</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-cap">Spin Wheel</div>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="s-header"><span>Quiz Harian</span><span>2/5</span></div>
+            <div class="s-body">
+              <div class="quiz-q">Apa warna karakter maskot Gacha Dynamic?</div>
+              <div class="quiz-opt sel"><span class="dot"></span> Biru</div>
+              <div class="quiz-opt"><span class="dot"></span> Merah</div>
+              <div class="quiz-opt"><span class="dot"></span> Hijau</div>
+              <div class="quiz-opt"><span class="dot"></span> Kuning</div>
+              <div class="quiz-submit">Kirim Jawaban</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-cap">Quiz Card</div>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="s-header"><span>Koleksi Karakter</span><span>8/20</span></div>
+            <div class="s-body">
+              <div class="char-grid">
+                <div class="char owned">🐼</div>
+                <div class="char owned">🦊</div>
+                <div class="char locked">🐯</div>
+                <div class="char owned">🐸</div>
+                <div class="char locked">🦁</div>
+                <div class="char locked">🐨</div>
+                <div class="char owned">🐰</div>
+                <div class="char locked">🐵</div>
+                <div class="char locked">🐺</div>
+              </div>
+              <div class="char-title">Kumpulkan semua lewat Spin &amp; Quiz</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-cap">Character Grid</div>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="s-header"><span>Tukar Poin</span><span>1.240 P</span></div>
+            <div class="s-body">
+              <div class="reward"><div class="thumb"></div><div class="info"><b>Voucher Belanja 50K</b><span>500 Poin</span></div><div class="btn-r">Tukar</div></div>
+              <div class="reward"><div class="thumb"></div><div class="info"><b>Tumbler Eksklusif</b><span>800 Poin</span></div><div class="btn-r">Tukar</div></div>
+              <div class="reward"><div class="thumb"></div><div class="info"><b>Diskon 20% Member</b><span>300 Poin</span></div><div class="btn-r">Tukar</div></div>
+              <div class="reward"><div class="thumb"></div><div class="info"><b>Karakter Eksklusif</b><span>1.500 Poin</span></div><div class="btn-r">Tukar</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-cap">Redeem Catalog</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-tag"><span class="n">2</span><h2>Canvas Builder (Sisi Admin)</h2></div>
+    <p class="section-sub">Mengikuti tampilan aplikasi yang berjalan hari ini: toolbar ikon di kiri, kanvas halaman di tengah, dan panel halaman bernomor di kanan — widget Spin Wheel sedang dipilih di halaman "Spin".</p>
+
+    <div class="builder-frame">
+      <div class="b-topbar">
+        <div class="b-topleft">
+          <div class="b-close">✕</div>
+          <div class="b-lang-pill"><span class="on">ID</span><span>EN</span><span>JA</span></div>
+        </div>
+        <div class="b-topright">
+          <div class="b-discard">✕ Discard</div>
+          <div class="b-save">✓ Save</div>
+        </div>
+      </div>
+
+      <div class="b-layout">
+        <div class="b-tools">
+          <div class="b-tool"><div class="ic">▭</div><span>Header/Footer</span></div>
+          <div class="b-tool"><div class="ic">Aa</div><span>Font</span></div>
+          <div class="b-tool"><div class="ic">🌐</div><span>Language</span></div>
+          <div class="b-tool"><div class="ic">✨</div><span>Click Action</span></div>
+          <div class="b-tool"><div class="ic">🖼</div><span>Background</span></div>
+        </div>
+
+        <div class="b-canvas-wrap">
+          <div class="b-canvas">
+            <div class="b-c-header">
+              <h4>Spin Wheel</h4>
+              <div class="b-c-pin">📍</div>
+              <div class="b-c-add">+</div>
+            </div>
+            <div class="b-c-body">
+              <div class="b-c-field">
+                <div class="fplus">+</div>
+                <div class="cv-el cv-widget cv-selected" style="position:relative; top:0; left:0; width:100%; height:190px; margin-top:6px;">
+                  <div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div>
+                  <div class="mini-wheel"></div>
+                  <div class="mini-btn">Putar Sekarang</div>
+                </div>
+              </div>
+              <div class="b-c-field">
+                <label>Lokasi Toko</label>
+                <div class="inp">Toko Jakarta — Kelapa Gading</div>
+                <div class="fplus">+</div>
+              </div>
+              <div class="b-c-field focused">
+                <label>Tiket Tersisa</label>
+                <div class="inp">3 tiket / hari</div>
+                <div class="fplus">+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="b-pages">
+          <div class="b-page-card">
+            <div class="b-thumb"><span class="b-badge">1</span><div class="b-thumb-img"></div></div>
+            <div class="b-thumb-cap"><b>Home</b><span>/</span></div>
+          </div>
+          <div class="b-page-card">
+            <div class="b-thumb"><span class="b-badge">2</span><div class="b-thumb-img" style="background:linear-gradient(160deg,#123a2e,#0d1b2a)"></div></div>
+            <div class="b-thumb-cap"><b>Dashboard</b><span>/dashboard</span></div>
+          </div>
+          <div class="b-page-card">
+            <div class="b-thumb selected"><span class="b-badge on">3</span>
+              <div class="b-thumb-img reg">
+                <div class="mini-reg-line" style="margin-top:14px; width:60%;"></div>
+                <div style="display:flex; justify-content:center; margin:10px 0;"><div style="width:46px; height:46px; border-radius:50%; background:conic-gradient(var(--accent) 0 90deg,#E8A63D 90deg 180deg,var(--accent-light) 180deg 270deg,#F2C879 270deg 360deg);"></div></div>
+                <div class="mini-reg-line" style="width:70%;"></div>
+                <div class="mini-reg-line" style="width:40%; margin-top:10px;"></div>
+              </div>
+            </div>
+            <div class="b-thumb-cap on"><b>Spin</b><span>/spin</span></div>
+          </div>
+          <div class="b-add-page"><div class="plus">+</div>Add a new page</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-sub" style="margin-top:26px; margin-left:0;">Saat ikon pengaturan pada widget terpilih dibuka, muncul panel konfigurasi khusus seperti berikut:</p>
+    <div class="config-callout">
+      <h4><span class="sq">⚙</span> Konfigurasi Widget: Spin Wheel</h4>
+      <div class="cc-grid">
+        <div>
+          <div class="field-lbl">Lokasi</div>
+          <div class="field-input">Toko Jakarta — Kelapa Gading <span class="arrow">▾</span></div>
+        </div>
+        <div>
+          <div class="field-lbl">Bahasa Konten</div>
+          <div class="lang-tabs"><span class="on">ID</span><span>EN</span><span>JA</span><span>+</span></div>
+        </div>
+        <div>
+          <div class="field-lbl">Syarat Akses (Access Condition)</div>
+          <div class="field-input">PIN ✓ dan Quiz ✓ <span class="arrow">▾</span></div>
+        </div>
+      </div>
+      <div class="field-lbl" style="margin-top:14px;">Reward Pool &amp; Bobot</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+        <div class="pool-item"><span class="nm">Karakter</span><div class="pool-bar"><i style="width:20%"></i></div><span class="pct">20%</span></div>
+        <div class="pool-item"><span class="nm">500 Poin</span><div class="pool-bar"><i style="width:45%"></i></div><span class="pct">45%</span></div>
+        <div class="pool-item"><span class="nm">100 EXP</span><div class="pool-bar"><i style="width:35%"></i></div><span class="pct">35%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Prototype desain untuk didiskusikan · Gacha Dynamic · 19 Agustus 2026</div>
+</footer>
+
+</body>
+</html>

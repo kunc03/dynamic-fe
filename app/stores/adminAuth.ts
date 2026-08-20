@@ -144,16 +144,35 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     }
   }
 
+  async function logout() {
+    loading.value = true
+    try {
+      const supabase = useSupabaseClient()
+      await supabase.auth.signOut()
+      role.value = null
+      isEditMode.value = false
+    } catch (e) {
+      console.error('Logout error:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const isSuperAdmin = computed(() => role.value === 'superadmin')
+
   return {
     isOpen,
     loading,
     error,
+    role,
+    isSuperAdmin,
     isAuthenticated,
     isEditMode,
     open,
     close,
     toggle,
     toggleEditMode,
-    login
+    login,
+    logout
   }
 })

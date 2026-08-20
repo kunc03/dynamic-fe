@@ -53,11 +53,18 @@ export default defineNuxtConfig({
   },
 
   // i18n: 3 bahasa buat UI admin (EditModeToggle/OuterBackgroundButton/dst)
-  // & fallback teks publik ("halaman tidak ditemukan") — lihat pesan
-  // lengkapnya di app/i18n.config.ts. INI BEDA dari terjemahan KONTEN
-  // canvas (teks yang admin isi sendiri per elemen, lihat contentEn/
-  // contentJa di canvasElements.ts) yang disimpan di database, bukan di
-  // sini.
+  // & fallback teks publik ("halaman tidak ditemukan") — isi terjemahannya
+  // ada di app/locales/id.json, en.json, ja.json (opsi vue-i18n lain kayak
+  // legacy/fallbackLocale tetap di app/i18n.config.ts). INI BEDA dari
+  // terjemahan KONTEN canvas (teks yang admin isi sendiri per elemen,
+  // lihat contentEn/contentJa di canvasElements.ts) yang disimpan di
+  // database, bukan di sini.
+  //
+  // langDir: 'locales' — relatif ke srcDir ('app/', lihat Nuxt 4), jadi
+  // resolve ke app/locales/. Tiap entri `locales` di bawah nunjuk ke SATU
+  // file JSON (bukan lagi object `messages` inline di i18n.config.ts) —
+  // @nuxtjs/i18n yang otomatis nge-load & gabungin isinya jadi messages
+  // vue-i18n, sekaligus bisa lazy-load per-locale.
   //
   // strategy: 'no_prefix' — SENGAJA gak nambah prefix /en/... /ja/... ke
   // URL, karena route di app ini sudah dinamis lewat app/pages/[slug].vue
@@ -70,10 +77,11 @@ export default defineNuxtConfig({
     vueI18n: './i18n.config.ts',
     defaultLocale: 'id',
     strategy: 'no_prefix',
+    langDir: 'locales',
     locales: [
-      { code: 'id', name: 'Indonesia' },
-      { code: 'en', name: 'English' },
-      { code: 'ja', name: '日本語' }
+      { code: 'id', name: 'Indonesia', file: 'id.json' },
+      { code: 'en', name: 'English', file: 'en.json' },
+      { code: 'ja', name: '日本語', file: 'ja.json' }
     ],
     detectBrowserLanguage: {
       useCookie: true,

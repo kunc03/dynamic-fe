@@ -96,7 +96,9 @@ export const usePagesStore = defineStore('pages', () => {
         .rpc('create_canvas_page', { p_slug: slug, p_title: title })
         .single()
 
-      if (rpcError) throw rpcError
+      if (rpcError) {
+        throw new Error(rpcError.message || t('admin.pages.genericError'))
+      }
       if (!data) throw new Error(t('admin.pages.genericError'))
 
       const created: SitePage = {
@@ -108,8 +110,8 @@ export const usePagesStore = defineStore('pages', () => {
       pages.value = [...pages.value, created]
 
       return created
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : t('admin.pages.genericError')
+    } catch (e: any) {
+      error.value = e?.message || (e instanceof Error ? e.message : t('admin.pages.genericError'))
       throw e
     } finally {
       saving.value = false

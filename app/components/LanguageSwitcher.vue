@@ -1,35 +1,38 @@
 <script setup lang="ts">
-// Pemilih bahasa buat PENGUNJUNG BIASA (bukan cuma admin) — beda dari
-// cluster ikon admin di app.vue (EditModeToggle dkk, yang sengaja di LUAR
-// .app-shell & disembunyikan di HP asli). Komponen ini DI DALAM
-// .app-shell (dipasang di app.vue) supaya kelihatan di HP asli juga,
-// nempel di pojok kanan-atas "layar HP" — `position: fixed` di sini tetap
-// "nempel" relatif ke KOTAK .app-shell (bukan viewport asli), soalnya
-// .app-shell punya `transform: scale(...)` (lihat main.css) yang otomatis
-// jadi containing block buat descendant fixed/absolute-nya, jadi ikut
-// ke-scale & ke-posisi bareng frame HP-nya, bukan geser ke pojok browser
-// asli.
-//
-// Ganti bahasa di sini CUMA ganti `locale` (dipakai buat: 1) semua label
-// UI admin lewat $t()/t(), 2) versi bahasa konten canvas yang dipilih di
-// CanvasEditor.vue — lihat contentEn/contentJa di canvasElements.ts).
-// TIDAK ngubah URL sama sekali (strategy: 'no_prefix', lihat nuxt.config.ts).
-const { locale, locales, setLocale } = useI18n()
+// Pemilih bahasa dinamis global di navbar admin
+const adminAuth = useAdminAuthStore()
+const siteLanguages = useSiteLanguagesStore()
+const { locales, setLocale } = useI18n()
+const { contentLocale, setContentLocale } = useContentLocale()
 
-const availableLocales = computed(() => locales.value)
+onMounted(() => {
+  siteLanguages.load()
+})
+
+const activeLanguages = computed(() => siteLanguages.activeLanguages)
+
+function onSelectLocale(code: string) {
+  setContentLocale(code)
+  if (locales.value.some(l => l.code === code)) {
+    setLocale(code)
+  }
+}
 </script>
 
 <template>
-  <div class="language-switcher fixed top-2 right-2 z-40 flex gap-0.5 rounded-full bg-black/40 p-0.5 backdrop-blur-sm">
+  <div
+    v-if="adminAuth.isAuthenticated && adminAuth.isEditMode"
+    class="language-switcher fixed top-5 left-[84px] z-50 flex gap-0.5 rounded-full bg-black/60 p-0.5 shadow-md backdrop-blur-md"
+  >
     <button
-      v-for="l in availableLocales"
+      v-for="l in activeLanguages"
       :key="l.code"
       type="button"
-      class="cursor-pointer rounded-full px-2 py-1 text-[10px] font-medium uppercase leading-none transition-colors"
-      :class="locale === l.code ? 'bg-white text-black' : 'text-white/80 hover:text-white'"
+      class="cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase leading-none transition-colors"
+      :class="(contentLocale === l.code || (!contentLocale && l.isDefault)) ? 'bg-white text-black shadow-sm' : 'text-white/80 hover:text-white'"
       :aria-label="`${l.name}`"
-      :aria-pressed="locale === l.code"
-      @click="setLocale(l.code)"
+      :aria-pressed="contentLocale === l.code"
+      @click="onSelectLocale(l.code)"
     >
       {{ l.code }}
     </button>
@@ -37,8 +40,9 @@ const availableLocales = computed(() => locales.value)
 </template>
 
 <style scoped>
-.language-switcher {
-  /* Sengaja gak ada media query hide-di-HP kayak cluster admin —
-     switcher ini justru BUAT pengunjung HP juga, bukan cuma desktop. */
+@media (max-width: 480px) {
+  .language-switcher {
+    display: none;
+  }
 }
 </style>

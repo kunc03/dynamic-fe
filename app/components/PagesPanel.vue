@@ -1,34 +1,20 @@
 <script setup lang="ts">
-// Panel navigasi & manajemen daftar halaman — cluster KANAN (beda dari
-// cluster KIRI EditModeToggle/OuterBackgroundButton/SectionVisibilityButton/
-// FontPresetsButton yang isinya setting tampilan GLOBAL buat semua
-// halaman, lihat app.vue). Isinya dua bagian:
-//
-//   1. Daftar semua halaman — "Beranda" (root "/", bawaan aplikasi) +
-//      halaman tambahan dari tabel `pages` (lihat stores/pages.ts). Klik
-//      salah satu langsung navigateTo() ke halaman itu; admin bisa
-//      LANGSUNG ngedit kontennya di sana lewat CanvasEditor.vue masing-
-//      masing halaman — edit mode (adminAuth.isEditMode) global, gak
-//      ke-reset pas pindah halaman, jadi alurnya: buka panel → klik
-//      halaman → langsung keliatan kotak putus-putus buat nambah/geser
-//      elemen di halaman itu.
-//   2. Form tambah halaman baru (judul + slug) — slug OTOMATIS ngikutin
-//      judul (bisa diedit manual, lihat slugify()/slugTouched di bawah),
-//      dipakai jadi path (/<slug>) SEKALIGUS page_key canvas_elements
-//      halaman itu. Klik "Tambah halaman" LANGSUNG kesimpan ke database
-//      (lihat alasannya di stores/pages.ts addPage()), lalu admin
-//      otomatis dipindah ke halaman barunya buat mulai ngisi konten.
+// Panel daftar halaman di sebelah KANAN di luar konten (.app-shell).
+// Menampilkan daftar semua halaman dalam format grid/flex-wrap horizontal (kiri ke kanan, lalu turun ke baris berikutnya):
+// 1. Nomor urut
+// 2. Card preview (canvas thumbnail) dengan live preview diperbesar tepat di BAWAH (atau ATAS) kartu saat di-hover
+// 3. Nama halaman dan path
+// Dilengkapi kartu "+" untuk menambah halaman baru secara sejajar.
 const adminAuth = useAdminAuthStore()
 const pagesStore = usePagesStore()
 const route = useRoute()
 const { t } = useI18n()
 
-const isPanelOpen = ref(false)
+// Muat daftar halaman saat komponen mount
+onMounted(() => {
+  pagesStore.load()
+})
 
-// "Beranda"/"Home" bukan baris database — selalu ada, ditaruh manual di
-// awal daftar (lihat penjelasan di stores/pages.ts kenapa 'home' gak
-// disimpan di tabel `pages`). Judulnya lewat t() (computed, bukan const)
-// biar ikut ganti pas admin ganti bahasa lewat LanguageSwitcher.vue.
 const pageEntries = computed(() => [
   { slug: 'home', title: t('admin.pages.home'), path: '/' },
   ...pagesStore.pages.map(p => ({ slug: p.slug, title: p.title, path: `/${p.slug}` }))
@@ -39,19 +25,97 @@ function isActivePage(path: string) {
 }
 
 function goToPage(path: string) {
-  isPanelOpen.value = false
-  if (route.path !== path) navigateTo(path)
+  hoveredEntry.value = null
+  hoveredRect.value = null
+  if (route.path !== path) {
+    navigateTo(path)
+  }
 }
 
-// Daftar halaman baru di-load pas panel PERTAMA KALI dibuka (bukan pas
-// komponen mount) — panel ini nempel di SETIAP halaman (dipasang global
-// di app.vue), jadi kalau load() dipanggil dari onMounted, tiap kali
-// pindah halaman bakal fetch ulang biarpun panelnya gak pernah dibuka.
-watch(isPanelOpen, (open) => {
-  if (open && pagesStore.pages.length === 0) pagesStore.load()
+// --- Hover State & Teleported Floating Preview ---
+interface HoveredEntry {
+  slug: string
+  title: string
+  path: string
+  idx: number
+}
+
+const hoveredEntry = ref<HoveredEntry | null>(null)
+const hoveredRect = ref<{ top: number, left: number, width: number, height: number, right: number, bottom: number } | null>(null)
+let hoverTimeout: any = null
+
+function updateHoverTarget(entry: { slug: string, title: string, path: string }, idx: number, target: HTMLElement) {
+  clearTimeout(hoverTimeout)
+  const rect = target.getBoundingClientRect()
+  hoveredRect.value = {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    right: rect.right,
+    bottom: rect.bottom
+  }
+  hoveredEntry.value = { ...entry, idx }
+}
+
+function onMouseEnterCard(entry: { slug: string, title: string, path: string }, idx: number, event: MouseEvent) {
+  updateHoverTarget(entry, idx, event.currentTarget as HTMLElement)
+}
+
+function onMouseLeaveCard() {
+  hoverTimeout = setTimeout(() => {
+    hoveredEntry.value = null
+    hoveredRect.value = null
+  }, 60)
+}
+
+const PREVIEW_WIDTH = 260
+const PREVIEW_HEIGHT = 410
+const isPlacedBelow = ref(true)
+
+const calculatedLeft = computed(() => {
+  if (import.meta.server || !hoveredRect.value) return 0
+  const rect = hoveredRect.value
+  const cardCenterX = rect.left + (rect.width / 2)
+  let left = cardCenterX - (PREVIEW_WIDTH / 2)
+
+  // Clamp horizontal agar tidak keluar layar kiri maupun kanan
+  const maxLeft = window.innerWidth - PREVIEW_WIDTH - 12
+  return Math.max(12, Math.min(maxLeft, left))
 })
 
-// --- Form tambah halaman ---
+const previewPosition = computed(() => {
+  if (import.meta.server || !hoveredRect.value) return { top: '0px', left: '0px' }
+  const rect = hoveredRect.value
+
+  const spaceBelow = window.innerHeight - rect.bottom
+  let top = 0
+
+  if (spaceBelow >= PREVIEW_HEIGHT + 16) {
+    isPlacedBelow.value = true
+    top = rect.bottom + 10
+  } else {
+    isPlacedBelow.value = false
+    top = rect.top - PREVIEW_HEIGHT - 10
+    top = Math.max(12, top)
+  }
+
+  return {
+    top: `${top}px`,
+    left: `${calculatedLeft.value}px`
+  }
+})
+
+// Panah penunjuk selalu presisi menunjuk ke titik tengah kartu yang sedang di-hover
+const arrowLeft = computed(() => {
+  if (!hoveredRect.value) return '50%'
+  const cardCenterX = hoveredRect.value.left + (hoveredRect.value.width / 2)
+  const offset = cardCenterX - calculatedLeft.value
+  return `${Math.max(18, Math.min(PREVIEW_WIDTH - 18, offset))}px`
+})
+
+// --- Form tambah halaman baru ---
+const isAddPopoverOpen = ref(false)
 const newTitle = ref('')
 const newSlug = ref('')
 const slugTouched = ref(false)
@@ -64,10 +128,6 @@ function slugify(text: string) {
     .replace(/^-+|-+$/g, '')
 }
 
-// Slug ngikutin judul OTOMATIS selama field slug belum disentuh manual
-// (slugTouched) — begitu admin ngetik langsung di field slug, kontrol
-// penuh pindah ke admin (mis. mau bikin slug lebih pendek dari judulnya),
-// gak ketimpa lagi tiap judul berubah.
 watch(newTitle, (title) => {
   if (!slugTouched.value) newSlug.value = slugify(title)
 })
@@ -89,101 +149,189 @@ async function onAddPage() {
     newTitle.value = ''
     newSlug.value = ''
     slugTouched.value = false
-    isPanelOpen.value = false
+    isAddPopoverOpen.value = false
     await navigateTo(`/${created.slug}`)
   } catch {
-    // Error sudah ke-capture di pagesStore.error & ditampilin di bawah
-    // form — form-nya SENGAJA gak di-reset di sini biar admin gak perlu
-    // ngetik ulang judul/slug abis gagal (mis. slug bentrok).
+    // Error ditangani di pagesStore.error
   }
 }
 </script>
 
 <template>
-  <UPopover
+  <div
     v-if="adminAuth.isAuthenticated && adminAuth.isEditMode"
-    v-model:open="isPanelOpen"
-    :content="{ side: 'left', align: 'start' }"
+    class="pages-sidebar-rail fixed top-20 left-[calc(50%+215px)] right-6 z-40 flex flex-row flex-wrap items-start gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pb-8 pr-2 pl-1 scrollbar-none"
   >
-    <div class="pages-panel-trigger fixed top-20 right-4 z-40 flex w-16 flex-col items-center gap-1">
-      <UButton
-        icon="i-lucide-files"
-        color="neutral"
-        variant="solid"
-        size="lg"
-        square
-        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer"
-        :aria-label="t('admin.pages.aria')"
-      />
-      <span class="block w-full select-none text-center text-[10px] font-medium leading-tight text-gray-700">
-        {{ t('admin.pages.label') }}
-      </span>
+    <!-- Daftar Kartu Halaman -->
+    <div
+      v-for="(entry, idx) in pageEntries"
+      :key="entry.path"
+      class="relative flex flex-col items-center gap-1.5 group w-[80px] shrink-0 cursor-pointer select-none"
+      @mouseenter="(e) => onMouseEnterCard(entry, idx, e)"
+      @mousemove="(e) => onMouseEnterCard(entry, idx, e)"
+      @mouseleave="onMouseLeaveCard"
+      @click="goToPage(entry.path)"
+    >
+      <!-- 1. Nomor Urut -->
+      <div
+        class="flex items-center justify-center size-5 rounded-full text-[10px] font-bold transition-all"
+        :class="isActivePage(entry.path)
+          ? 'bg-primary text-white shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-primary'
+          : 'bg-neutral-800 text-gray-300 ring-1 ring-white/10'"
+      >
+        {{ idx + 1 }}
+      </div>
+
+      <!-- 2. Card Preview Thumbnail -->
+      <div class="relative transition-all duration-200">
+        <div
+          class="rounded-xl overflow-hidden shadow-md transition-all duration-200 group-hover:scale-105"
+          :class="isActivePage(entry.path)
+            ? 'ring-2 ring-primary ring-offset-2 ring-offset-neutral-900 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+            : 'ring-1 ring-neutral-700 group-hover:ring-neutral-500 opacity-85 group-hover:opacity-100'"
+        >
+          <PageCanvasPreview
+            :page-key="entry.slug"
+            :width="76"
+            :height="118"
+            :include-header-footer="true"
+          />
+        </div>
+      </div>
+
+      <!-- 3. Nama Halaman dan Path -->
+      <div class="flex flex-col items-center text-center w-full leading-tight">
+        <span
+          class="text-[11px] font-medium truncate w-full"
+          :class="isActivePage(entry.path) ? 'text-primary font-semibold' : 'text-gray-700'"
+        >
+          {{ entry.title }}
+        </span>
+        <span class="text-[9px] font-mono text-gray-400 truncate w-full">
+          {{ entry.path }}
+        </span>
+      </div>
     </div>
 
-    <template #content>
-      <div class="w-72 space-y-3 p-3">
-        <p class="text-sm font-medium">
-          {{ t('admin.pages.panelTitle') }}
-        </p>
+    <!-- Tombol / Kartu Tambah Halaman Baru (+) sejajar dalam flex-wrap -->
+    <div class="flex flex-col items-center gap-1.5 w-[80px] shrink-0 select-none">
+      <div class="size-5" />
+      <UPopover v-model:open="isAddPopoverOpen" :content="{ side: 'bottom', align: 'center' }">
+        <button
+          type="button"
+          class="cursor-pointer w-[76px] h-[118px] rounded-xl border-2 border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-primary transition-all duration-150 shadow-sm"
+          :aria-label="t('admin.pages.addNew')"
+        >
+          <UIcon name="i-lucide-plus" class="size-6" />
+          <span class="text-[10px] font-medium text-center px-1 leading-tight">
+            {{ t('admin.pages.addNew') }}
+          </span>
+        </button>
 
-        <ul class="max-h-56 space-y-1 overflow-y-auto pr-1">
-          <li v-for="entry in pageEntries" :key="entry.path">
-            <button
-              type="button"
-              class="w-full cursor-pointer rounded px-2 py-1.5 text-left text-sm transition-colors"
-              :class="isActivePage(entry.path) ? 'bg-primary/15 text-primary font-medium' : 'hover:bg-elevated'"
-              @click="goToPage(entry.path)"
-            >
-              {{ entry.title }}
-              <span class="text-muted"> — {{ entry.path }}</span>
-            </button>
-          </li>
-        </ul>
+        <template #content>
+          <div class="w-64 space-y-2.5 p-3.5 bg-neutral-950 text-white border border-white/15 rounded-xl shadow-2xl">
+            <p class="text-xs font-semibold text-white">
+              {{ t('admin.pages.addNew') }}
+            </p>
 
-        <hr class="border-default">
+            <UInput
+              v-model="newTitle"
+              :placeholder="t('admin.pages.titlePlaceholder')"
+              size="xs"
+              autofocus
+            />
+            <UInput
+              :model-value="newSlug"
+              :placeholder="t('admin.pages.slugPlaceholder')"
+              size="xs"
+              @update:model-value="(v) => onSlugInput(String(v))"
+            />
+            <p class="text-[10px] text-gray-400">
+              {{ t('admin.pages.openAt') }} <code class="text-primary">/{{ newSlug || t('admin.pages.slugPlaceholder') }}</code>
+            </p>
 
-        <p class="text-xs font-medium text-muted">
-          {{ t('admin.pages.addNew') }}
-        </p>
+            <UButton
+              :label="t('admin.pages.submit')"
+              icon="i-lucide-plus"
+              color="primary"
+              size="xs"
+              block
+              class="cursor-pointer"
+              :loading="pagesStore.saving"
+              :disabled="!canSubmit"
+              @click="onAddPage"
+            />
 
-        <UInput
-          v-model="newTitle"
-          :placeholder="t('admin.pages.titlePlaceholder')"
-          size="sm"
+            <p v-if="pagesStore.error" class="text-[10px] text-red-400">
+              {{ pagesStore.error }}
+            </p>
+          </div>
+        </template>
+      </UPopover>
+    </div>
+
+    <!-- Floating Enlarged Live Preview Popover on Hover (pointer-events-none agar tidak menghalangi kursor) -->
+    <Teleport to="body">
+      <div
+        v-if="hoveredEntry && hoveredRect"
+        class="hover-preview-card fixed z-[9999] w-[260px] max-w-[260px] box-border flex flex-col gap-2 rounded-2xl bg-neutral-950/95 p-3 shadow-[0_25px_60px_rgba(0,0,0,0.9)] border border-white/20 backdrop-blur-2xl pointer-events-none transition-[left,top] duration-150 ease-out overflow-hidden"
+        :style="previewPosition"
+      >
+        <!-- Tooltip Arrow Indicator (Selalu Menunjuk Presisi ke Tengah Kartu yang Di-Hover) -->
+        <div
+          v-if="isPlacedBelow"
+          class="absolute -top-1.5 size-3 rotate-45 bg-neutral-950 border-t border-l border-white/20"
+          :style="{ left: arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }"
         />
-        <UInput
-          :model-value="newSlug"
-          :placeholder="t('admin.pages.slugPlaceholder')"
-          size="sm"
-          @update:model-value="(v) => onSlugInput(String(v))"
-        />
-        <p class="text-xs text-muted">
-          {{ t('admin.pages.openAt') }} <code>/{{ newSlug || t('admin.pages.slugPlaceholder') }}</code>
-        </p>
-
-        <UButton
-          :label="t('admin.pages.submit')"
-          icon="i-lucide-plus"
-          color="primary"
-          size="sm"
-          block
-          class="cursor-pointer"
-          :loading="pagesStore.saving"
-          :disabled="!canSubmit"
-          @click="onAddPage"
+        <div
+          v-else
+          class="absolute -bottom-1.5 size-3 rotate-45 bg-neutral-950 border-b border-r border-white/20"
+          :style="{ left: arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }"
         />
 
-        <p v-if="pagesStore.error" class="text-xs text-error">
-          {{ pagesStore.error }}
-        </p>
+        <!-- Header Info (Text Truncated agar Lebar Tidak Bertambah) -->
+        <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-2 w-full min-w-0 overflow-hidden">
+          <div class="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+            <span class="flex items-center justify-center size-4 rounded-full bg-primary text-white text-[9px] font-bold shrink-0">
+              {{ hoveredEntry.idx + 1 }}
+            </span>
+            <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[85px]">
+              {{ hoveredEntry.title }}
+            </span>
+            <span class="text-[9px] font-mono px-1 py-0.5 rounded bg-white/10 text-gray-300 truncate max-w-[65px] shrink-0">
+              {{ hoveredEntry.path }}
+            </span>
+          </div>
+          <span class="text-[10px] text-primary/90 font-medium whitespace-nowrap shrink-0">
+            {{ t('admin.pages.clickToOpen') }}
+          </span>
+        </div>
+
+        <!-- Live Canvas Scaled Preview -->
+        <div
+          class="relative rounded-xl overflow-hidden ring-1 ring-white/15 bg-neutral-900 shadow-inner mx-auto"
+        >
+          <PageCanvasPreview
+            :key="hoveredEntry.slug"
+            :page-key="hoveredEntry.slug"
+            :width="234"
+            :height="360"
+            :include-header-footer="true"
+          />
+        </div>
+
+        <div class="text-center text-[10px] text-gray-400 pt-0.5 truncate w-full">
+          {{ t('admin.pages.livePreviewHint') }}
+        </div>
       </div>
-    </template>
-  </UPopover>
+    </Teleport>
+
+  </div>
 </template>
 
 <style scoped>
 @media (max-width: 480px) {
-  .pages-panel-trigger {
+  .pages-sidebar-rail {
     display: none;
   }
 }

@@ -1,21 +1,6 @@
 <script setup lang="ts">
-// Tool pertama di edit mode: ubah background CONTENT (bagian DALAM
-// app-shell / "layar HP"-nya sendiri) — BUKAN area putih di luar. Tombolnya
-// sengaja ditaruh di luar .app-shell (lihat app.vue) karena di situ ada
-// ruang kosong buat nampung ikon-ikon tool, tapi yang berubah warnanya
-// tetap bagian dalam.
-//
-// Milih warna/gambar di sini update draft (bg.draftMode/draftColor/
-// draftImageDataUrl) DAN langsung nge-apply ke background CONTENT asli
-// (live preview — lihat applyDraft() di backgroundSettings.ts), supaya
-// admin bisa lihat hasilnya beneran di halamannya, bukan cuma di swatch
-// kecil. Yang BELUM terjadi sampai klik tombol Save (kanan atas, lihat
-// SaveContentBackgroundButton.vue) cuma penyimpanan ke database — kalau
-// reload sebelum Save, balik lagi ke state tersimpan terakhir.
-//
-// Cuma tampil kalau edit mode lagi nyala (lihat EditModeToggle.vue), dan cuma
-// di layar yang cukup lebar (di HP asli, gak ada area putih buat ditaruh
-// tombolnya). Tool berikutnya akan ditambah satu per satu di bawah ikon ini.
+// Tool di cluster kiri edit mode: ubah background CONTENT (bagian DALAM app-shell).
+// Tombolnya berada di luar .app-shell (lihat app.vue).
 const adminAuth = useAdminAuthStore()
 const bg = useBackgroundStore()
 const { t } = useI18n()
@@ -35,7 +20,7 @@ function triggerFilePicker() {
 async function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  input.value = '' // biar bisa pilih file yang sama lagi kalau perlu
+  input.value = ''
 
   if (!file || !file.type.startsWith('image/')) return
 
@@ -52,11 +37,12 @@ async function onFileChange(event: Event) {
     <div class="outer-bg-trigger fixed top-[104px] left-4 z-40 flex w-16 flex-col items-center gap-1">
       <UButton
         icon="i-lucide-image"
-        color="neutral"
+        :color="isPanelOpen ? 'primary' : 'neutral'"
         variant="solid"
         size="lg"
         square
-        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer"
+        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+        :class="isPanelOpen ? 'ring-2 ring-primary ring-offset-2' : ''"
         :aria-label="t('admin.background.aria')"
       />
       <span class="block w-full select-none text-center text-[10px] font-medium leading-tight text-gray-700">
@@ -65,7 +51,7 @@ async function onFileChange(event: Event) {
     </div>
 
     <template #content>
-      <div class="w-64 space-y-4 p-4">
+      <div class="w-72 space-y-4 p-4">
         <p class="text-sm font-medium">
           {{ t('admin.background.panelTitle') }}
         </p>
@@ -115,7 +101,8 @@ async function onFileChange(event: Event) {
           @click="bg.resetDraftToThemeDefault"
         />
 
-        <p v-if="bg.isDirty" class="text-xs text-muted">
+        <!-- Dirty Notice -->
+        <p v-if="bg.isDirty" class="text-xs text-amber-600 dark:text-amber-400">
           {{ t('admin.background.dirtyNotice') }}
         </p>
       </div>
@@ -124,8 +111,7 @@ async function onFileChange(event: Event) {
 </template>
 
 <style scoped>
-/* app-shell max 390px — di bawah ~480px gak ada ruang putih di kiri buat
-   tombol ini, jadi disembunyikan aja. */
+/* app-shell max 390px — di bawah ~480px disembunyikan */
 @media (max-width: 480px) {
   .outer-bg-trigger {
     display: none;

@@ -2,44 +2,32 @@ import { defineStore } from 'pinia'
 
 export type SectionBgMode = 'color' | 'image'
 
-// Tinggi DEFAULT header/footer sebelum admin pernah nge-custom (dipakai
-// buat nilai awal ref di bawah & tombol "Reset ke default" di panel) — bukan
-// lagi fixed permanen, admin sekarang bisa ubah lewat SectionVisibilityButton.vue
-// (kolom header_height/footer_height, lihat migration
-// 0017_header_footer_height_overflow.sql di project `be`).
 export const DEFAULT_HEADER_HEIGHT_PX = 88
 export const DEFAULT_FOOTER_HEIGHT_PX = 88
 
-// Pengaturan GLOBAL header & footer: tampil/sembunyi + background masing-
-// masing (lihat SiteHeader.vue / SiteFooter.vue, dipasang di app.vue) —
-// dikontrol admin lewat SectionVisibilityButton.vue. Disimpan sebagai kolom
-// di site_settings (singleton config, sama kayak content_bg_* &
-// font_presets) — lihat migration 0015_header_footer.sql (visibilitas) &
-// 0016_header_footer_background.sql (background) di project `be`.
-//
-// Kalau visible = false, section-nya TETAP ke-render (elemen-elemennya
-// tetap ada di database) buat pengunjung biasa cuma disembunyikan (gak
-// di-render sama sekali); admin yang lagi edit mode TETAP bisa lihat & edit
-// isinya (ditandain outline putus-putus + label "disembunyikan", lihat
-// SiteHeader.vue/SiteFooter.vue), biar bisa nyiapin isinya duluan sebelum
-// beneran ditampilin ke publik.
-//
-// Background header/footer pakai pola PERSIS sama kayak backgroundSettings.ts
-// (content background) — mode 'color' atau 'image', tapi diterapkan LOKAL
-// lewat inline style di SiteHeader.vue/SiteFooter.vue sendiri (bukan custom
-// property di <html>), soalnya header/footer itu kotak terbatas (fixed
-// height), bukan seluruh halaman.
-//
-// Sama kayak store lain di project ini: ada state TERSIMPAN vs DRAFT — ubah
-// apa pun di panel cuma ubah draft (+ live preview LANGSUNG kelihatan di
-// header/footer aslinya), baru kesimpan ke database pas klik Save
-// (SaveEditsButton.vue).
+export interface PageSectionVisibility {
+  header: boolean
+  footer: boolean
+}
+
+const DEFAULT_PAGE_VISIBILITY: PageSectionVisibility = {
+  header: true,
+  footer: true
+}
+
+// Pengaturan Header & Footer:
+// - Visibilitas (Show/Hide) sekarang diatur PER-HALAMAN (disimpan di `canvas_page_backgrounds`,
+//   migration 0029_canvas_page_header_footer_visibility.sql).
+// - Desain / Ukuran kotak Header & Footer (tinggi, overflow, warna/gambar background)
+//   tetap bersifat global untuk konsistensi seluruh aplikasi (disimpan di `site_settings`).
 export const useSectionVisibilityStore = defineStore('sectionVisibility', () => {
   const adminAuth = useAdminAuthStore()
 
-  const headerVisible = ref(true)
-  const footerVisible = ref(true)
+  // Visibilitas per halaman
+  const pageVisibilities = ref<Record<string, PageSectionVisibility>>({})
+  const draftPageVisibilities = ref<Record<string, PageSectionVisibility>>({})
 
+  // Pengaturan global bentuk & background header/footer
   const headerBgMode = ref<SectionBgMode>('color')
   const headerBgColor = ref<string | null>(null)
   const headerBgImage = ref<string | null>(null)
@@ -52,9 +40,6 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
   const footerHeight = ref(DEFAULT_FOOTER_HEIGHT_PX)
   const headerClipOverflow = ref(true)
   const footerClipOverflow = ref(true)
-
-  const draftHeaderVisible = ref(true)
-  const draftFooterVisible = ref(true)
 
   const draftHeaderBgMode = ref<SectionBgMode>('color')
   const draftHeaderBgColor = ref<string | null>(null)
@@ -72,10 +57,32 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
   const saving = ref(false)
   const error = ref<string | null>(null)
 
-  const isDirty = computed(() =>
-    draftHeaderVisible.value !== headerVisible.value
-    || draftFooterVisible.value !== footerVisible.value
-    || draftHeaderBgMode.value !== headerBgMode.value
+  function getSavedHeaderVisible(pageKey: string): boolean {
+    return pageVisibilities.value[pageKey]?.header ?? DEFAULT_PAGE_VISIBILITY.header
+  }
+
+  function getSavedFooterVisible(pageKey: string): boolean {
+    return pageVisibilities.value[pageKey]?.footer ?? DEFAULT_PAGE_VISIBILITY.footer
+  }
+
+  function getDraftHeaderVisible(pageKey: string): boolean {
+    return draftPageVisibilities.value[pageKey]?.header ?? getSavedHeaderVisible(pageKey)
+  }
+
+  function getDraftFooterVisible(pageKey: string): boolean {
+    return draftPageVisibilities.value[pageKey]?.footer ?? getSavedFooterVisible(pageKey)
+  }
+
+  function isPageVisibilityDirty(pageKey: string): boolean {
+    const savedH = getSavedHeaderVisible(pageKey)
+    const savedF = getSavedFooterVisible(pageKey)
+    const draftH = getDraftHeaderVisible(pageKey)
+    const draftF = getDraftFooterVisible(pageKey)
+    return savedH !== draftH || savedF !== draftF
+  }
+
+  const isGlobalDirty = computed(() =>
+    draftHeaderBgMode.value !== headerBgMode.value
     || draftHeaderBgColor.value !== headerBgColor.value
     || draftHeaderBgImage.value !== headerBgImage.value
     || draftFooterBgMode.value !== footerBgMode.value
@@ -87,25 +94,46 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     || draftFooterClipOverflow.value !== footerClipOverflow.value
   )
 
-  // Admin edit mode lihat draft (biar toggle di panel langsung keliatan
-  // efeknya), visitor biasa lihat state TERSIMPAN — logic ini dulu ke-
-  // duplikat di SiteHeader.vue & SiteFooter.vue, sekarang disatukan di sini
-  // + dipakai juga sama pages/index.vue buat ngitung sisa tinggi layar
-  // (lihat headerRenderedHeight/footerRenderedHeight).
+  const isDirty = computed(() => {
+    if (isGlobalDirty.value) return true
+    const allKeys = new Set([...Object.keys(pageVisibilities.value), ...Object.keys(draftPageVisibilities.value)])
+    for (const key of allKeys) {
+      if (isPageVisibilityDirty(key)) return true
+    }
+    return false
+  })
+
   const isEditable = computed(() => adminAuth.isAuthenticated && adminAuth.isEditMode)
 
-  const headerIsVisible = computed(() => (isEditable.value ? draftHeaderVisible.value : headerVisible.value))
-  const footerIsVisible = computed(() => (isEditable.value ? draftFooterVisible.value : footerVisible.value))
+  function isHeaderVisible(pageKey: string): boolean {
+    return isEditable.value ? getDraftHeaderVisible(pageKey) : getSavedHeaderVisible(pageKey)
+  }
 
-  // Admin edit mode: section TETAP dirender walau nonaktif (kotak putus-
-  // putus), biar bisa nyiapin isinya duluan. Visitor biasa: gak dirender
-  // sama sekali kalau nonaktif -> gak makan tinggi layar sama sekali.
-  const headerShouldRender = computed(() => headerIsVisible.value || isEditable.value)
-  const footerShouldRender = computed(() => footerIsVisible.value || isEditable.value)
+  function isFooterVisible(pageKey: string): boolean {
+    return isEditable.value ? getDraftFooterVisible(pageKey) : getSavedFooterVisible(pageKey)
+  }
 
-  // Tinggi & clip-overflow yang LAGI DIPAKAI (draft pas edit mode, tersimpan
-  // pas visitor biasa) — dipakai SiteHeader.vue/SiteFooter.vue buat style
-  // kotaknya sendiri.
+  function setDraftPageHeaderVisible(pageKey: string, value: boolean) {
+    draftPageVisibilities.value = {
+      ...draftPageVisibilities.value,
+      [pageKey]: {
+        header: value,
+        footer: getDraftFooterVisible(pageKey)
+      }
+    }
+  }
+
+  function setDraftPageFooterVisible(pageKey: string, value: boolean) {
+    draftPageVisibilities.value = {
+      ...draftPageVisibilities.value,
+      [pageKey]: {
+        header: getDraftHeaderVisible(pageKey),
+        footer: value
+      }
+    }
+  }
+
+  // Tinggi & clip-overflow yang LAGI DIPAKAI
   const headerEffectiveHeight = computed(() => (isEditable.value ? draftHeaderHeight.value : headerHeight.value))
   const footerEffectiveHeight = computed(() => (isEditable.value ? draftFooterHeight.value : footerHeight.value))
   const headerEffectiveClipOverflow = computed(() =>
@@ -115,16 +143,22 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     (isEditable.value ? draftFooterClipOverflow.value : footerClipOverflow.value)
   )
 
-  // Tinggi yang BENERAN direbut header/footer dari layar saat ini — 0 kalau
-  // lagi gak dirender sama sekali. Dipakai pages/index.vue buat nyisain
-  // tinggi content persis pas "100dvh dikurangi ini", jadi footer gak
-  // kedorong keluar layar & jadi harus di-scroll buat keliatan.
-  const headerRenderedHeight = computed(() => (headerShouldRender.value ? headerEffectiveHeight.value : 0))
-  const footerRenderedHeight = computed(() => (footerShouldRender.value ? footerEffectiveHeight.value : 0))
+  function getHeaderRenderedHeight(pageKey: string): number {
+    return isHeaderVisible(pageKey) ? headerEffectiveHeight.value : 0
+  }
+
+  function getFooterRenderedHeight(pageKey: string): number {
+    return isFooterVisible(pageKey) ? footerEffectiveHeight.value : 0
+  }
+
+  // Fallback kompatibilitas
+  const headerRenderedHeight = computed(() => headerEffectiveHeight.value)
+  const footerRenderedHeight = computed(() => footerEffectiveHeight.value)
+  const headerShouldRender = computed(() => true)
+  const footerShouldRender = computed(() => true)
 
   function resetDraft() {
-    draftHeaderVisible.value = headerVisible.value
-    draftFooterVisible.value = footerVisible.value
+    draftPageVisibilities.value = JSON.parse(JSON.stringify(pageVisibilities.value))
     draftHeaderBgMode.value = headerBgMode.value
     draftHeaderBgColor.value = headerBgColor.value
     draftHeaderBgImage.value = headerBgImage.value
@@ -142,17 +176,34 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
 
     const supabase = useSupabaseClient()
 
+    // 1. Ambil visibilitas per halaman dari canvas_page_backgrounds
+    const { data: pageBgs } = await supabase
+      .from('canvas_page_backgrounds')
+      .select('page_key, header_visible, footer_visible')
+
+    const map: Record<string, PageSectionVisibility> = {}
+
+    if (pageBgs && pageBgs.length > 0) {
+      for (const row of pageBgs) {
+        map[row.page_key] = {
+          header: row.header_visible ?? true,
+          footer: row.footer_visible ?? true
+        }
+      }
+    }
+
+    pageVisibilities.value = map
+
+    // 2. Ambil styling global dari site_settings
     const { data, error: fetchError } = await supabase
       .from('site_settings')
       .select(
-        'header_visible, footer_visible, header_bg_mode, header_bg_color, header_bg_image, footer_bg_mode, footer_bg_color, footer_bg_image, header_height, footer_height, header_clip_overflow, footer_clip_overflow'
+        'header_bg_mode, header_bg_color, header_bg_image, footer_bg_mode, footer_bg_color, footer_bg_image, header_height, footer_height, header_clip_overflow, footer_clip_overflow'
       )
       .eq('id', 1)
       .single()
 
     if (!fetchError && data) {
-      headerVisible.value = data.header_visible ?? true
-      footerVisible.value = data.footer_visible ?? true
       headerBgMode.value = data.header_bg_mode === 'image' ? 'image' : 'color'
       headerBgColor.value = data.header_bg_color ?? null
       headerBgImage.value = data.header_bg_image ?? null
@@ -166,14 +217,6 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     }
 
     resetDraft()
-  }
-
-  function setDraftHeaderVisible(value: boolean) {
-    draftHeaderVisible.value = value
-  }
-
-  function setDraftFooterVisible(value: boolean) {
-    draftFooterVisible.value = value
   }
 
   // --- Background header ---
@@ -228,10 +271,6 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     draftFooterBgImage.value = null
   }
 
-  // --- Tinggi & clip-overflow header/footer ---
-  // `value` di-clamp ke minimal 20px di sisi client (server juga nolak <= 0,
-  // lihat migration 0017) — kotak sekecil apa pun masih butuh sedikit ruang
-  // biar tombol "+" tambah elemen-nya sendiri gak keimpit.
   function setDraftHeaderHeight(value: number) {
     if (!Number.isFinite(value)) return
     draftHeaderHeight.value = Math.max(20, Math.round(value))
@@ -250,9 +289,6 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     draftFooterClipOverflow.value = value
   }
 
-  // Commit draft -> tersimpan lewat RPC `save_section_visibility` (SECURITY
-  // DEFINER, cek is_admin() sendiri — lihat migration
-  // 0016_header_footer_background.sql di project `be`).
   async function save() {
     if (import.meta.server || !isDirty.value) return
 
@@ -262,35 +298,54 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     const supabase = useSupabaseClient()
 
     try {
-      const { error: rpcError } = await supabase.rpc('save_section_visibility', {
-        p_header_visible: draftHeaderVisible.value,
-        p_footer_visible: draftFooterVisible.value,
-        p_header_bg_mode: draftHeaderBgMode.value,
-        p_header_bg_color: draftHeaderBgColor.value,
-        p_header_bg_image: draftHeaderBgImage.value,
-        p_footer_bg_mode: draftFooterBgMode.value,
-        p_footer_bg_color: draftFooterBgColor.value,
-        p_footer_bg_image: draftFooterBgImage.value,
-        p_header_height: draftHeaderHeight.value,
-        p_footer_height: draftFooterHeight.value,
-        p_header_clip_overflow: draftHeaderClipOverflow.value,
-        p_footer_clip_overflow: draftFooterClipOverflow.value
-      })
+      // 1. Simpan perubahan visibilitas per halaman
+      const allKeys = new Set([...Object.keys(pageVisibilities.value), ...Object.keys(draftPageVisibilities.value)])
+      for (const pageKey of allKeys) {
+        if (isPageVisibilityDirty(pageKey)) {
+          const draftH = getDraftHeaderVisible(pageKey)
+          const draftF = getDraftFooterVisible(pageKey)
+          await supabase.rpc('save_page_background', {
+            p_page_key: pageKey,
+            p_bg: {
+              headerVisible: draftH,
+              footerVisible: draftF
+            }
+          })
+        }
+      }
 
-      if (rpcError) throw rpcError
+      pageVisibilities.value = JSON.parse(JSON.stringify(draftPageVisibilities.value))
 
-      headerVisible.value = draftHeaderVisible.value
-      footerVisible.value = draftFooterVisible.value
-      headerBgMode.value = draftHeaderBgMode.value
-      headerBgColor.value = draftHeaderBgColor.value
-      headerBgImage.value = draftHeaderBgImage.value
-      footerBgMode.value = draftFooterBgMode.value
-      footerBgColor.value = draftFooterBgColor.value
-      footerBgImage.value = draftFooterBgImage.value
-      headerHeight.value = draftHeaderHeight.value
-      footerHeight.value = draftFooterHeight.value
-      headerClipOverflow.value = draftHeaderClipOverflow.value
-      footerClipOverflow.value = draftFooterClipOverflow.value
+      // 2. Simpan styling global jika berubah
+      if (isGlobalDirty.value) {
+        const { error: rpcError } = await supabase.rpc('save_section_visibility', {
+          p_header_visible: true,
+          p_footer_visible: true,
+          p_header_bg_mode: draftHeaderBgMode.value,
+          p_header_bg_color: draftHeaderBgColor.value,
+          p_header_bg_image: draftHeaderBgImage.value,
+          p_footer_bg_mode: draftFooterBgMode.value,
+          p_footer_bg_color: draftFooterBgColor.value,
+          p_footer_bg_image: draftFooterBgImage.value,
+          p_header_height: draftHeaderHeight.value,
+          p_footer_height: draftFooterHeight.value,
+          p_header_clip_overflow: draftHeaderClipOverflow.value,
+          p_footer_clip_overflow: draftFooterClipOverflow.value
+        })
+
+        if (rpcError) throw rpcError
+
+        headerBgMode.value = draftHeaderBgMode.value
+        headerBgColor.value = draftHeaderBgColor.value
+        headerBgImage.value = draftHeaderBgImage.value
+        footerBgMode.value = draftFooterBgMode.value
+        footerBgColor.value = draftFooterBgColor.value
+        footerBgImage.value = draftFooterBgImage.value
+        headerHeight.value = draftHeaderHeight.value
+        footerHeight.value = draftFooterHeight.value
+        headerClipOverflow.value = draftHeaderClipOverflow.value
+        footerClipOverflow.value = draftFooterClipOverflow.value
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Gagal menyimpan pengaturan header/footer.'
       throw e
@@ -300,8 +355,8 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
   }
 
   return {
-    headerVisible,
-    footerVisible,
+    pageVisibilities,
+    draftPageVisibilities,
     headerBgMode,
     headerBgColor,
     headerBgImage,
@@ -312,8 +367,6 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     footerHeight,
     headerClipOverflow,
     footerClipOverflow,
-    draftHeaderVisible,
-    draftFooterVisible,
     draftHeaderBgMode,
     draftHeaderBgColor,
     draftHeaderBgImage,
@@ -326,8 +379,13 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     draftFooterClipOverflow,
     isDirty,
     isEditable,
-    headerIsVisible,
-    footerIsVisible,
+    isHeaderVisible,
+    isFooterVisible,
+    getDraftHeaderVisible,
+    getDraftFooterVisible,
+    setDraftPageHeaderVisible,
+    setDraftPageFooterVisible,
+    isPageVisibilityDirty,
     headerShouldRender,
     footerShouldRender,
     headerEffectiveHeight,
@@ -336,12 +394,12 @@ export const useSectionVisibilityStore = defineStore('sectionVisibility', () => 
     footerEffectiveClipOverflow,
     headerRenderedHeight,
     footerRenderedHeight,
+    getHeaderRenderedHeight,
+    getFooterRenderedHeight,
     saving,
     error,
     load,
     resetDraft,
-    setDraftHeaderVisible,
-    setDraftFooterVisible,
     setDraftHeaderBgColor,
     setDraftHeaderBgImageFile,
     resetDraftHeaderBgToDefault,

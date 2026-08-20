@@ -38,7 +38,7 @@ onMounted(async () => {
 <template>
   <div v-if="!checked" />
 
-  <div v-else-if="isKnownPage" class="relative" :style="{ minHeight: contentMinHeight }">
+  <div v-else-if="isKnownPage" class="relative w-full flex-1 flex flex-col" :style="{ minHeight: contentMinHeight }">
     <CanvasEditor :page-key="slug" />
   </div>
 

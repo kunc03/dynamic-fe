@@ -76,14 +76,15 @@ function toggleFamilyMode(preset: { id: string, fontFamily: string }) {
     v-model:open="isPanelOpen"
     :content="{ side: 'right', align: 'start' }"
   >
-    <div class="font-presets-trigger fixed top-[280px] left-4 z-40 flex w-16 flex-col items-center gap-1">
+    <div class="font-presets-trigger fixed top-[192px] left-4 z-40 flex w-16 flex-col items-center gap-1">
       <UButton
         icon="i-lucide-case-sensitive"
-        color="neutral"
+        :color="isPanelOpen ? 'primary' : 'neutral'"
         variant="solid"
         size="lg"
         square
-        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer"
+        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+        :class="isPanelOpen ? 'ring-2 ring-primary ring-offset-2' : ''"
         :aria-label="t('admin.fonts.aria')"
       />
       <span class="block w-full select-none text-center text-[10px] font-medium leading-tight text-gray-700">
@@ -191,17 +192,16 @@ function toggleFamilyMode(preset: { id: string, fontFamily: string }) {
                 @update:model-value="(v) => fonts.updatePreset(preset.id, { fontWeight: Number(v) })"
               />
 
-              <!-- Native color picker (sama kayak OuterBackgroundButton.vue)
-                   — swatch kecil aja, gak butuh label sendiri biar tetep
-                   satu baris sama ukuran & weight. -->
-              <input
-                type="color"
-                class="h-8 w-9 shrink-0 cursor-pointer rounded border border-default bg-transparent p-0"
-                :value="preset.color || '#ffffff'"
-                :title="t('admin.fonts.colorTitle', { color: preset.color || '#ffffff' })"
-                :aria-label="t('admin.fonts.colorAria', { name: preset.name })"
-                @input="(e) => fonts.updatePreset(preset.id, { color: (e.target as HTMLInputElement).value })"
-              >
+              <!-- Native color picker -->
+              <UTooltip :text="t('admin.fonts.colorTitle', { color: preset.color || '#ffffff' })">
+                <input
+                  type="color"
+                  class="h-8 w-9 shrink-0 cursor-pointer rounded border border-default bg-transparent p-0"
+                  :value="preset.color || '#ffffff'"
+                  :aria-label="t('admin.fonts.colorAria', { name: preset.name })"
+                  @input="(e) => fonts.updatePreset(preset.id, { color: (e.target as HTMLInputElement).value })"
+                >
+              </UTooltip>
             </div>
           </div>
         </div>

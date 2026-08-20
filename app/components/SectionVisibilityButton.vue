@@ -57,14 +57,15 @@ async function onFooterFileChange(event: Event) {
     v-model:open="isPanelOpen"
     :content="{ side: 'right', align: 'start' }"
   >
-    <div class="section-visibility-trigger fixed top-[192px] left-4 z-40 flex w-16 flex-col items-center gap-1">
+    <div class="section-visibility-trigger fixed top-[104px] left-4 z-40 flex w-16 flex-col items-center gap-1">
       <UButton
         icon="i-lucide-panel-top"
-        color="neutral"
+        :color="isPanelOpen ? 'primary' : 'neutral'"
         variant="solid"
         size="lg"
         square
-        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer"
+        class="size-11 shrink-0 justify-center shadow-lg cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+        :class="isPanelOpen ? 'ring-2 ring-primary ring-offset-2' : ''"
         :aria-label="t('admin.sections.aria')"
       />
       <span class="block w-full select-none text-center text-[10px] font-medium leading-tight text-gray-700">
@@ -77,14 +78,6 @@ async function onFooterFileChange(event: Event) {
         <p class="text-sm font-medium">
           {{ t('admin.sections.panelTitle') }}
         </p>
-
-        <div class="flex items-center justify-between gap-3">
-          <span class="text-sm text-muted">{{ t('admin.sections.showHeader') }}</span>
-          <USwitch
-            :model-value="sections.draftHeaderVisible"
-            @update:model-value="(v) => sections.setDraftHeaderVisible(!!v)"
-          />
-        </div>
 
         <!-- Tinggi kotak header (px) + toggle "boleh meluber keluar" — satu
              baris ringkas. Meluber OFF (default) = elemen yang lebih gede
@@ -116,36 +109,39 @@ async function onFooterFileChange(event: Event) {
              kepanjangan (ada 2 section di panel yang sama: header+footer). -->
         <div class="flex items-center gap-1.5">
           <span class="flex-1 text-xs text-muted">{{ t('admin.sections.bgHeader') }}</span>
-          <input
-            type="color"
-            class="h-8 w-9 shrink-0 cursor-pointer rounded border border-default bg-transparent p-0"
-            :value="sections.draftHeaderBgColor || '#0f172a'"
-            :title="t('admin.sections.colorHeaderAria')"
-            :aria-label="t('admin.sections.colorHeaderAria')"
-            @input="onHeaderColorInput"
-          >
-          <UButton
-            icon="i-lucide-upload"
-            color="neutral"
-            variant="outline"
-            size="xs"
-            square
-            class="cursor-pointer"
-            :aria-label="t('admin.sections.uploadHeaderAria')"
-            :title="t('admin.sections.uploadTitle')"
-            @click="triggerHeaderFilePicker"
-          />
-          <UButton
-            icon="i-lucide-rotate-ccw"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            class="cursor-pointer"
-            :aria-label="t('admin.sections.resetHeaderAria')"
-            :title="t('admin.sections.resetTitle')"
-            @click="sections.resetDraftHeaderBgToDefault"
-          />
+          <UTooltip :text="t('admin.sections.colorHeaderAria')">
+            <input
+              type="color"
+              class="h-8 w-9 shrink-0 cursor-pointer rounded border border-default bg-transparent p-0"
+              :value="sections.draftHeaderBgColor || '#0f172a'"
+              :aria-label="t('admin.sections.colorHeaderAria')"
+              @input="onHeaderColorInput"
+            >
+          </UTooltip>
+          <UTooltip :text="t('admin.sections.uploadTitle')">
+            <UButton
+              icon="i-lucide-upload"
+              color="neutral"
+              variant="outline"
+              size="xs"
+              square
+              class="cursor-pointer"
+              :aria-label="t('admin.sections.uploadHeaderAria')"
+              @click="triggerHeaderFilePicker"
+            />
+          </UTooltip>
+          <UTooltip :text="t('admin.sections.resetTitle')">
+            <UButton
+              icon="i-lucide-rotate-ccw"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              square
+              class="cursor-pointer"
+              :aria-label="t('admin.sections.resetHeaderAria')"
+              @click="sections.resetDraftHeaderBgToDefault"
+            />
+          </UTooltip>
           <input
             ref="headerFileInputRef"
             type="file"
@@ -156,14 +152,6 @@ async function onFooterFileChange(event: Event) {
         </div>
 
         <hr class="border-default">
-
-        <div class="flex items-center justify-between gap-3">
-          <span class="text-sm text-muted">{{ t('admin.sections.showFooter') }}</span>
-          <USwitch
-            :model-value="sections.draftFooterVisible"
-            @update:model-value="(v) => sections.setDraftFooterVisible(!!v)"
-          />
-        </div>
 
         <div class="flex items-center gap-1.5">
           <span class="flex-1 text-xs text-muted">{{ t('admin.sections.heightFooter') }}</span>
@@ -186,36 +174,39 @@ async function onFooterFileChange(event: Event) {
 
         <div class="flex items-center gap-1.5">
           <span class="flex-1 text-xs text-muted">{{ t('admin.sections.bgFooter') }}</span>
-          <input
-            type="color"
-            class="h-8 w-9 shrink-0 cursor-pointer rounded border border-default bg-transparent p-0"
-            :value="sections.draftFooterBgColor || '#0f172a'"
-            :title="t('admin.sections.colorFooterAria')"
-            :aria-label="t('admin.sections.colorFooterAria')"
-            @input="onFooterColorInput"
-          >
-          <UButton
-            icon="i-lucide-upload"
-            color="neutral"
-            variant="outline"
-            size="xs"
-            square
-            class="cursor-pointer"
-            :aria-label="t('admin.sections.uploadFooterAria')"
-            :title="t('admin.sections.uploadTitle')"
-            @click="triggerFooterFilePicker"
-          />
-          <UButton
-            icon="i-lucide-rotate-ccw"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            class="cursor-pointer"
-            :aria-label="t('admin.sections.resetFooterAria')"
-            :title="t('admin.sections.resetTitle')"
-            @click="sections.resetDraftFooterBgToDefault"
-          />
+          <UTooltip :text="t('admin.sections.colorFooterAria')">
+            <input
+              type="color"
+              class="h-8 w-9 shrink-0 cursor-pointer rounded border border-default bg-transparent p-0"
+              :value="sections.draftFooterBgColor || '#0f172a'"
+              :aria-label="t('admin.sections.colorFooterAria')"
+              @input="onFooterColorInput"
+            >
+          </UTooltip>
+          <UTooltip :text="t('admin.sections.uploadTitle')">
+            <UButton
+              icon="i-lucide-upload"
+              color="neutral"
+              variant="outline"
+              size="xs"
+              square
+              class="cursor-pointer"
+              :aria-label="t('admin.sections.uploadFooterAria')"
+              @click="triggerFooterFilePicker"
+            />
+          </UTooltip>
+          <UTooltip :text="t('admin.sections.resetTitle')">
+            <UButton
+              icon="i-lucide-rotate-ccw"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              square
+              class="cursor-pointer"
+              :aria-label="t('admin.sections.resetFooterAria')"
+              @click="sections.resetDraftFooterBgToDefault"
+            />
+          </UTooltip>
           <input
             ref="footerFileInputRef"
             type="file"

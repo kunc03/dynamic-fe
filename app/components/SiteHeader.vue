@@ -18,14 +18,15 @@ import { HEADER_PAGE_KEY } from '../stores/canvasElements'
 // Logic tampil/sembunyi (isVisible/shouldRender) disatukan di
 // sectionVisibility.ts (headerIsVisible/headerShouldRender) — dulu
 // di-duplikat sendiri-sendiri di sini & SiteFooter.vue.
+const route = useRoute()
 const sections = useSectionVisibilityStore()
+const currentPageKey = computed(() => {
+  const slug = route.params.slug
+  return typeof slug === 'string' && slug ? slug : 'home'
+})
 
-// Background header sendiri (independen dari background content) — sama
-// pola mode 'color'/'image' kayak backgroundSettings.ts, tapi diterapkan
-// LANGSUNG lewat inline style di kontainer ini (bukan custom property di
-// <html>), soalnya header cuma kotak terbatas, bukan seluruh halaman. Gak
-// pernah di-custom -> transparan, nembus ke background content di
-// belakangnya (perilaku lama, sebelum fitur ini ada).
+const shouldRender = computed(() => sections.isHeaderVisible(currentPageKey.value))
+
 const backgroundStyle = computed(() => {
   const mode = sections.isEditable ? sections.draftHeaderBgMode : sections.headerBgMode
   const color = sections.isEditable ? sections.draftHeaderBgColor : sections.headerBgColor
@@ -49,18 +50,10 @@ const backgroundStyle = computed(() => {
 
 <template>
   <div
-    v-if="sections.headerShouldRender"
-    class="relative w-full"
-    :class="{ 'border border-dashed border-default': !sections.headerIsVisible }"
+    v-if="shouldRender"
+    class="relative w-full shrink-0 z-20"
     :style="[{ height: `${sections.headerEffectiveHeight}px` }, backgroundStyle]"
   >
-    <span
-      v-if="!sections.headerIsVisible"
-      class="pointer-events-none absolute left-1 top-1 z-20 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white"
-    >
-      Header disembunyikan dari pengunjung
-    </span>
-
     <CanvasEditor :page-key="HEADER_PAGE_KEY" :clip-overflow="sections.headerEffectiveClipOverflow" />
   </div>
 </template>
