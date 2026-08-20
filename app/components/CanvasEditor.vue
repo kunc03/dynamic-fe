@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import Moveable from 'vue3-moveable'
+// vue3-moveable memanipulasi DOM langsung (drag/resize handle nempel ke
+// document.body) dan cuma relevan di browser. Di-import sebagai type-only +
+// async component (lihat `Moveable` & `<ClientOnly>` di bawah) supaya modul
+// aslinya TIDAK PERNAH di-resolve/dieksekusi di sisi server — vue3-moveable
+// versi tertentu (mis. 0.28.0) punya bug packaging di field "main"
+// (package.json) yang bikin Nitro gagal me-resolve-nya saat build server
+// dan berujung error 500 saat runtime kalau di-import secara statis biasa.
+import type MoveableType from 'vue3-moveable'
 import { useActiveCanvasSelection, HEADER_PAGE_KEY, FOOTER_PAGE_KEY, type CanvasElement, type FormFieldType, type CanvasFormConfig } from '../stores/canvasElements'
 import { usePageDialogStore } from '../stores/pageDialog'
 
@@ -419,7 +426,8 @@ function recomputeToolbarPosition() {
 // Moveable GAK OTOMATIS TAHU, handle-nya jadi "ketinggalan" di posisi lama
 // sampai ada drag/resize baru. Ini penyebab keluhan "handle nempel di
 // posisi sebelumnya" pas abis edit teks.
-const moveableRef = ref<InstanceType<typeof Moveable> | null>(null)
+const Moveable = defineAsyncComponent(() => import('vue3-moveable'))
+const moveableRef = ref<InstanceType<typeof MoveableType> | null>(null)
 function syncMoveableRect() {
   nextTick(() => {
     moveableRef.value?.updateRect()
@@ -1194,28 +1202,32 @@ function onResizeEnd(e: { target: HTMLElement | SVGElement, lastEvent: { width: 
 
     </div>
 
-    <Moveable
-      v-if="isEditable && selectedTarget"
-      ref="moveableRef"
-      :target="selectedTarget"
-      :draggable="true"
-      :resizable="true"
-      :origin="false"
-      :zoom="appScale"
-      :bounds="moveableBounds"
-      :snappable="true"
-      :snap-container="canvasEditorRef"
-      :snap-directions="SNAP_DIRECTIONS"
-      :element-snap-directions="SNAP_DIRECTIONS"
-      :vertical-guidelines="verticalGuidelines"
-      :horizontal-guidelines="horizontalGuidelines"
-      :element-guidelines="otherElementNodes"
-      :snap-threshold="5"
-      :is-display-snap-digit="false"
-      @render="onRender"
-      @dragEnd="onDragEnd"
-      @resizeEnd="onResizeEnd"
-    />
+    <!-- Dibungkus ClientOnly: vue3-moveable murni DOM manipulation, jangan
+         pernah dirender/di-resolve di server (lihat catatan di <script>). -->
+    <ClientOnly>
+      <Moveable
+        v-if="isEditable && selectedTarget"
+        ref="moveableRef"
+        :target="selectedTarget"
+        :draggable="true"
+        :resizable="true"
+        :origin="false"
+        :zoom="appScale"
+        :bounds="moveableBounds"
+        :snappable="true"
+        :snap-container="canvasEditorRef"
+        :snap-directions="SNAP_DIRECTIONS"
+        :element-snap-directions="SNAP_DIRECTIONS"
+        :vertical-guidelines="verticalGuidelines"
+        :horizontal-guidelines="horizontalGuidelines"
+        :element-guidelines="otherElementNodes"
+        :snap-threshold="5"
+        :is-display-snap-digit="false"
+        @render="onRender"
+        @dragEnd="onDragEnd"
+        @resizeEnd="onResizeEnd"
+      />
+    </ClientOnly>
 
     <!-- Tombol "+" tambah elemen — Sticky melayang di pojok kanan-atas canvas (hanya di edit mode) -->
     <template v-if="isEditable">
